@@ -1,17 +1,25 @@
 {
-  "name": "main",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+	"name": "base.scrilexia.ai",
+	"version": "1.0.0",
+	"description": "",
+	"homepage": "https://github.com/Scrilexia/app.scrilexia.ai#readme",
+	"bugs": {
+		"url": "https://github.com/Scrilexia/app.scrilexia.ai/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Scrilexia/app.scrilexia.ai.git"
+	},
   "scripts": {
-  "dev": "ts-node src/main.ts",
-  "build": "tsc",
-  "start": "node dist/main.js"
-    "test": "echo \"Error: no test specified\" && exit 1"
+		"fix": "npx @biomejs/biome check --write .",
+		"dev": "tsx watch --clear-screen=false ./src/main",
+		"build": "tsc -p ./tsconfig.json --outDir ./dist --esModuleInterop",
+		"start": "node dist/main.js",
+		"test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Scrilexia",
+  "license": "MIT",
   "type": "commonjs",
   "dependencies": {
     "express": "^5.1.0"
@@ -20,6 +28,11 @@
     "@types/express": "^5.0.5",
     "@types/node": "^24.10.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+	  "nodemon": "^3.1.10",
+  	"tsconfig-paths": "^4.2.0",
+  	"tsup": "^8.3.6",
+  	"tsx": "^4.19.2",
+    "typescript": "^5.9.3",
+		"@biomejs/biome": "1.9.2"
   }
 }
