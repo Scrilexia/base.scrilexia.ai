@@ -22,7 +22,7 @@ export type LegiFranceCodeArticle = {
 	endDate: Date | null;
 };
 
-class LegiFranceCodeRepository extends BaseRepository {
+class LegiFranceCodeOrLawRepository extends BaseRepository {
 	protected override dbName: string;
 
 	constructor() {
@@ -40,7 +40,7 @@ class LegiFranceCodeRepository extends BaseRepository {
 		await this.initializeClient();
 		this.connect();
 
-		if (!(await this.client.tableExists("lf_code"))) {
+		if (!(await this.client.tableExists("lf_code_law"))) {
 			const schema = new Schema();
 			schema.addColumn("id", "VARCHAR(60) PRIMARY KEY NOT NULL");
 			schema.addColumn("title", "TEXT NOT NULL");
@@ -48,7 +48,7 @@ class LegiFranceCodeRepository extends BaseRepository {
 			schema.addColumn("state", "VARCHAR(30) NOT NULL");
 			schema.addColumn("start_date", "DATETIME");
 			schema.addColumn("end_date", "DATETIME");
-			await this.client.createTable("lf_code", schema);
+			await this.client.createTable("lf_code_law", schema);
 		}
 	}
 
@@ -58,7 +58,7 @@ class LegiFranceCodeRepository extends BaseRepository {
 		this.connect();
 
 		await this.client.query<Result>(
-			"INSERT INTO lf_code (id, title, title_full, state, start_date, end_date) VALUES (?, ?, ?, ?, ?, ?)",
+			"INSERT INTO lf_code_law (id, title, title_full, state, start_date, end_date) VALUES (?, ?, ?, ?, ?, ?)",
 			[
 				code.id,
 				code.title,
@@ -75,7 +75,7 @@ class LegiFranceCodeRepository extends BaseRepository {
 		this.connect();
 
 		const [rows] = await this.client.query<Rows>(
-			"SELECT * FROM lf_code WHERE id = ?",
+			"SELECT * FROM lf_code_law WHERE id = ?",
 			[id],
 		);
 
@@ -97,7 +97,7 @@ class LegiFranceCodeRepository extends BaseRepository {
 	async readAll(): Promise<LegiFranceCode[]> {
 		this.connect();
 
-		const [rows] = await this.client.query<Rows>("SELECT * FROM lf_code");
+		const [rows] = await this.client.query<Rows>("SELECT * FROM lf_code_law");
 		return rows.map((row) => ({
 			id: row.id,
 			title: row.title,
@@ -113,7 +113,7 @@ class LegiFranceCodeRepository extends BaseRepository {
 		this.connect();
 
 		await this.client.query(
-			"UPDATE lf_code SET title = ?, state = ?, start_date = ?, end_date = ? WHERE id = ?",
+			"UPDATE lf_code_law SET title = ?, state = ?, start_date = ?, end_date = ? WHERE id = ?",
 			[code.title, code.state, code.startDate, code.endDate, code.id],
 		);
 	}
@@ -122,16 +122,16 @@ class LegiFranceCodeRepository extends BaseRepository {
 	async delete(id: string): Promise<void> {
 		this.connect();
 
-		await this.client.query("DELETE FROM lf_code WHERE id = ?", [id]);
+		await this.client.query("DELETE FROM lf_code_law WHERE id = ?", [id]);
 	}
 
 	async deleteTable(): Promise<void> {
 		this.connect();
-		await this.client.deleteTable("lf_code");
+		await this.client.deleteTable("lf_code_law");
 	}
 }
 
-export class LegiFranceCodeArticleRepository extends BaseRepository {
+export class LegiFranceArticleRepository extends BaseRepository {
 	protected override dbName: string;
 
 	constructor() {
@@ -149,7 +149,7 @@ export class LegiFranceCodeArticleRepository extends BaseRepository {
 		await this.initializeClient();
 		this.connect();
 
-		if (!(await this.client.tableExists("lf_code_article"))) {
+		if (!(await this.client.tableExists("lf_article"))) {
 			const schema = new Schema();
 			schema.addColumn("id", "VARCHAR(60) PRIMARY KEY NOT NULL");
 			schema.addColumn("code_id", "VARCHAR(60) NOT NULL");
@@ -158,8 +158,8 @@ export class LegiFranceCodeArticleRepository extends BaseRepository {
 			schema.addColumn("state", "VARCHAR(30) NOT NULL");
 			schema.addColumn("start_date", "DATETIME");
 			schema.addColumn("end_date", "DATETIME");
-			schema.addForeignKeyConstraint("code_id", "lf_code", "id", "DELETE");
-			await this.client.createTable("lf_code_article", schema);
+			schema.addForeignKeyConstraint("code_id", "lf_code_law", "id", "DELETE");
+			await this.client.createTable("lf_article", schema);
 		}
 	}
 
@@ -169,7 +169,7 @@ export class LegiFranceCodeArticleRepository extends BaseRepository {
 		this.connect();
 
 		await this.client.query<Result>(
-			"INSERT INTO lf_code_article (id, code_id, number, text, state, start_date, end_date) VALUES (?, ?, ?, ?, ?, ?, ?)",
+			"INSERT INTO lf_article (id, code_id, number, text, state, start_date, end_date) VALUES (?, ?, ?, ?, ?, ?, ?)",
 			[
 				article.id,
 				article.codeId,
@@ -186,7 +186,7 @@ export class LegiFranceCodeArticleRepository extends BaseRepository {
 	async read(id: string): Promise<LegiFranceCodeArticle | null> {
 		this.connect();
 		const [rows] = await this.client.query<Rows>(
-			"SELECT * FROM lf_code_article WHERE id = ?",
+			"SELECT * FROM lf_article WHERE id = ?",
 			[id],
 		);
 		if (rows.length === 0) {
@@ -210,7 +210,7 @@ export class LegiFranceCodeArticleRepository extends BaseRepository {
 	): Promise<LegiFranceCodeArticle | null> {
 		this.connect();
 		const [rows] = await this.client.query<Rows>(
-			"SELECT * FROM lf_code_article WHERE id = ? AND code_id = ?",
+			"SELECT * FROM lf_article WHERE id = ? AND code_id = ?",
 			[id, codeId],
 		);
 
@@ -235,8 +235,8 @@ export class LegiFranceCodeArticleRepository extends BaseRepository {
 	): Promise<LegiFranceCodeArticle | null> {
 		this.connect();
 		const [rows] = await this.client.query<Rows>(
-			`SELECT ar.* FROM lf_code_article ar
-             INNER JOIN lf_code co ON ar.code_id = co.id
+			`SELECT ar.* FROM lf_article ar
+             INNER JOIN lf_code_law co ON ar.code_id = co.id
              WHERE ar.number = ? AND co.title = ?`,
 			[articleNumber, codeTitle],
 		);
@@ -261,7 +261,7 @@ export class LegiFranceCodeArticleRepository extends BaseRepository {
 		this.connect();
 
 		await this.client.query<Result>(
-			"UPDATE lf_code_article SET code_id = ?, number = ?, text = ?, state = ?, start_date = ?, end_date = ? WHERE id = ?",
+			"UPDATE lf_article SET code_id = ?, number = ?, text = ?, state = ?, start_date = ?, end_date = ? WHERE id = ?",
 			[
 				article.codeId,
 				article.number,
@@ -277,18 +277,17 @@ export class LegiFranceCodeArticleRepository extends BaseRepository {
 	// delete
 	async delete(id: string): Promise<void> {
 		this.connect();
-		await this.client.query<Result>(
-			"DELETE FROM lf_code_article WHERE id = ?",
-			[id],
-		);
+		await this.client.query<Result>("DELETE FROM lf_article WHERE id = ?", [
+			id,
+		]);
 	}
 
 	async deleteTable(): Promise<void> {
 		this.connect();
-		await this.client.deleteTable("lf_code_article");
+		await this.client.deleteTable("lf_article");
 	}
 }
 
-export const legiFranceCodeRepository = new LegiFranceCodeRepository();
-export const legiFranceCodeArticleRepository =
-	new LegiFranceCodeArticleRepository();
+export const legiFranceCodeOrLawRepository =
+	new LegiFranceCodeOrLawRepository();
+export const legiFranceArticleRepository = new LegiFranceArticleRepository();

@@ -141,3 +141,91 @@ export class CodeSearchResults {
 		this.results = _results;
 	}
 }
+
+export class LegiFranceLawArticleOnline {
+	id: string;
+	num: string;
+	texte: string;
+	content: string;
+	etat: string | undefined | null;
+	dateDebut: number;
+	dateFin: number;
+
+	constructor(
+		_id = "",
+		_num = "",
+		_texte = "",
+		_content = "",
+		_etat = null,
+		_dateDebut = 0,
+		_dateFin = 0,
+	) {
+		this.id = _id;
+		this.num = _num;
+		this.texte = _texte;
+		this.content = _content;
+		this.etat = _etat;
+		this.dateDebut = _dateDebut;
+		this.dateFin = _dateFin;
+	}
+}
+
+export class LegiFranceLawSectionOnline {
+	id: string;
+	articles: Array<LegiFranceLawArticleOnline>;
+	sections: Array<LegiFranceLawSectionOnline>;
+
+	constructor(
+		_id = "",
+		_articles: Array<LegiFranceLawArticleOnline> = [],
+		_sections: Array<LegiFranceLawSectionOnline> = [],
+	) {
+		this.id = _id;
+		this.articles = _articles;
+		this.sections = _sections;
+	}
+}
+
+export class LegiFranceLawOnline {
+	id: string;
+	title: string | undefined;
+	titre: string | undefined;
+	dateDebutVersion: string;
+	dateFinVersion: string;
+	articles: Array<LegiFranceLawArticleOnline>;
+	sections: Array<LegiFranceLawSectionOnline>;
+
+	constructor(
+		_id = "",
+		_title = undefined,
+		_titre = undefined,
+		_dateDebutVersion = "",
+		_dateFinVersion = "",
+		_articles: Array<LegiFranceLawArticleOnline> = [],
+		_sections: Array<LegiFranceLawSectionOnline> = [],
+	) {
+		this.id = _id;
+		this.title = _title;
+		this.titre = _titre;
+		this.dateDebutVersion = _dateDebutVersion;
+		this.dateFinVersion = _dateFinVersion;
+		this.articles = _articles;
+		this.sections = _sections;
+	}
+}
+
+export class LegiFranceLawEnumerationResult {
+	executionTime: number;
+	results: Array<LegiFranceLawOnline>;
+	totalResultNumber: number;
+
+	constructor(
+		_executionTime = 0,
+		_results: Array<LegiFranceLawOnline> = [],
+		_totalResultNumber = 0,
+	) {
+		this.executionTime = _executionTime;
+		this.results = _results;
+		this.totalResultNumber = _totalResultNumber;
+	}
+}

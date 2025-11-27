@@ -1,21 +1,11 @@
-import { InferenceClient } from "@huggingface/inference";
-import { CHUNK_SIZE } from "../../types/constants";
-import { Abort } from "../../utils/abortController";
-import {
-	connectLegiFrance,
-	getEnvValue,
-	legiFrancePostRequest,
-} from "../../utils/environment";
-import type { Collection } from "../vector/collection";
+import type { Abort } from "../../utils/abortController";
 import vectorManager from "../vector/vectorManager";
-import { Vector } from "../vector/vectorUtils";
 import { LegiFranceBase } from "./legiFrance";
 import {
-	legiFranceCodeArticleRepository,
-	legiFranceCodeRepository,
-} from "./legiFranceCodeArticleRepository";
+	legiFranceArticleRepository,
+	legiFranceCodeOrLawRepository,
+} from "./legiFranceArticleRepository";
 import {
-	ArticleSearchResult,
 	CodeSearchResult,
 	type CodeSearchResults,
 	type LegiFranceCodeArticleOnline,
@@ -24,15 +14,10 @@ import {
 
 export class LegiFranceCodes extends LegiFranceBase {
 	#code: string;
-	#abortController: Abort;
-	#hfToken: string | null = null;
-	#hfModel: string | null = null;
-	#collection: Collection | null = null;
 
-	constructor(code = "") {
-		super();
+	constructor(code: string, abortController: Abort) {
+		super(abortController);
 		this.#code = code;
-		this.#abortController = new Abort();
 	}
 
 	set code(value: string) {
@@ -48,36 +33,11 @@ export class LegiFranceCodes extends LegiFranceBase {
 	}
 
 	async addArticles(): Promise<void> {
+		this.abortController.reset();
+
 		// Implementation to add articles based on this.#code
-		await legiFranceCodeRepository.initializeDatabase();
-		await legiFranceCodeArticleRepository.initializeDatabase();
 
-		await connectLegiFrance();
-		this.#hfToken = getEnvValue("hugging_face_token");
-		this.#hfModel = getEnvValue("hugging_face_embedding_model");
-
-		const hf = new InferenceClient(this.#hfToken as string);
-		const result = await hf.featureExtraction({
-			model: this.#hfModel as string,
-			inputs: "test",
-			provider: "hf-inference",
-		});
-
-		if (Array.isArray(result) && result.length > 0) {
-			if (Array.isArray(result[0])) {
-				vectorManager.size = (result[0] as number[]).length;
-			} else {
-				vectorManager.size = result.length;
-			}
-		}
-
-		const collectionName = `legifrance_embeddings_${vectorManager.size}`;
-		if (!(await vectorManager.collectionExists(collectionName))) {
-			this.#collection = await vectorManager.createCollection(collectionName);
-		} else {
-			this.#collection = await vectorManager.getCollection(collectionName);
-		}
-
+		await this.prepareDatabases();
 		const code = await this.searchCodes();
 
 		if (!code) {
@@ -85,7 +45,7 @@ export class LegiFranceCodes extends LegiFranceBase {
 		}
 
 		try {
-			legiFranceCodeRepository.create({
+			await legiFranceCodeOrLawRepository.create({
 				id: code.id,
 				title: code.titre,
 				titleFull: code.titre,
@@ -95,7 +55,7 @@ export class LegiFranceCodes extends LegiFranceBase {
 			});
 		} catch (_error) {
 			// already exists
-			legiFranceCodeRepository.update({
+			await legiFranceCodeOrLawRepository.update({
 				id: code.id,
 				title: code.titre,
 				titleFull: code.titre,
@@ -106,8 +66,8 @@ export class LegiFranceCodes extends LegiFranceBase {
 		}
 
 		await this.retrieveArticlesIdsFromCode(code);
-		legiFranceCodeRepository.disconnect();
-		legiFranceCodeArticleRepository.disconnect();
+		await legiFranceCodeOrLawRepository.disconnect();
+		await legiFranceArticleRepository.disconnect();
 	}
 
 	private async searchCodes(): Promise<CodeSearchResult | null> {
@@ -147,7 +107,6 @@ export class LegiFranceCodes extends LegiFranceBase {
 		code: CodeSearchResult,
 	): Promise<void> {
 		// Implementation to retrieve article IDs from the code
-		this.#abortController.reset();
 
 		try {
 			const url =
@@ -168,30 +127,27 @@ export class LegiFranceCodes extends LegiFranceBase {
 				return;
 			}
 
-			const articlesIds: LegiFranceCodeArticleOnline[] = [];
+			const collectedArticles: LegiFranceCodeArticleOnline[] = [];
 
 			if (codeOnline?.sections) {
 				for (const section of codeOnline.sections) {
-					articlesIds.push(
-						...(await this.collectCodeArticleIdsFromSection(
-							section,
-							codeOnline.dateDebutVersion,
-						)),
+					collectedArticles.push(
+						...(await this.collectArticleIdsFromSection(section)),
 					);
 				}
 			}
 
 			if (codeOnline?.articles) {
-				articlesIds.push(
-					...(await this.collectCodeArticleIds(codeOnline.articles)),
+				collectedArticles.push(
+					...(await this.collectArticleIds(codeOnline.articles)),
 				);
 			}
 
-			const sortedArticlesIds: LegiFranceCodeArticleOnline[] = [];
+			const sortedCollectedArticlesIds: LegiFranceCodeArticleOnline[] = [];
 			const articlesSet: Set<string> = new Set();
 
-			sortedArticlesIds.push(
-				...articlesIds
+			sortedCollectedArticlesIds.push(
+				...collectedArticles
 					.filter(
 						(article) =>
 							article.num &&
@@ -213,8 +169,8 @@ export class LegiFranceCodes extends LegiFranceBase {
 						return valueA - valueB;
 					}),
 			);
-			sortedArticlesIds.push(
-				...articlesIds.filter(
+			sortedCollectedArticlesIds.push(
+				...collectedArticles.filter(
 					(article) =>
 						!article.num ||
 						article.num === "" ||
@@ -223,7 +179,7 @@ export class LegiFranceCodes extends LegiFranceBase {
 			);
 
 			await this.insertCodeArticlesAccordingIds(
-				sortedArticlesIds,
+				sortedCollectedArticlesIds,
 				code.id,
 				code.titre,
 			);
@@ -246,124 +202,11 @@ export class LegiFranceCodes extends LegiFranceBase {
 			console.log(
 				`Article ${articleDetails.num} du ${codeTitle} (${++index}/${articles.length})`,
 			);
-			await this.insertCodeArticle(articleDetails, codeId, codeTitle);
-		}
-	}
+			await this.insertArticle(articleDetails, codeId, codeTitle);
 
-	private async searchArticleById(id: string): Promise<ArticleSearchResult> {
-		const body = {
-			id: id,
-		};
-
-		try {
-			const data = await legiFrancePostRequest<Record<string, unknown>>(
-				"https://api.piste.gouv.fr/dila/legifrance/lf-engine-app/consult/getArticle",
-				body,
-			);
-
-			if (!data) {
-				console.error("Error: No data found in searchArticleById");
-				return new ArticleSearchResult();
+			if (this.abortController.controller.signal.aborted) {
+				break;
 			}
-
-			return data.article as unknown as ArticleSearchResult;
-		} catch (error) {
-			console.error(error);
-			return new ArticleSearchResult();
-		}
-	}
-
-	private async insertCodeArticle(
-		articleDetails: ArticleSearchResult,
-		codeId: string,
-		codeTitle: string,
-	): Promise<void> {
-		if (
-			!articleDetails ||
-			!articleDetails.texte ||
-			articleDetails.texte.trim() === ""
-		) {
-			console.warn(`No valid text found for article ${articleDetails.id}`);
-			return;
-		}
-
-		const date = Number.isInteger(articleDetails.dateDebut)
-			? new Date(articleDetails.dateDebut as number)
-			: new Date(articleDetails.dateDebut);
-
-		const chunks = await this.splitTextWithtokens(
-			articleDetails.texte,
-			CHUNK_SIZE,
-		);
-
-		const hf = new InferenceClient(this.#hfToken as string);
-
-		for (const chunk of chunks) {
-			const result = await hf.featureExtraction({
-				model: this.#hfModel as string,
-				inputs: chunk,
-				provider: "hf-inference",
-			});
-
-			let embedding: number[] = [];
-			if (Array.isArray(result) && result.length > 0) {
-				if (Array.isArray(result[0])) {
-					const vectors = (result as Array<number[]>).map(
-						(vectorArray) => new Vector(vectorArray),
-					);
-					embedding = Vector.center(vectors).vector;
-				} else {
-					const vector = new Vector(result as number[]);
-					vector.normalize();
-					embedding = vector.vector;
-				}
-			} else {
-				console.warn(
-					`No embedding generated for article ${articleDetails.id}, chunk skipped.`,
-				);
-				continue;
-			}
-
-			const length = (await this.#collection?.getCount()) ?? 0;
-			await this.#collection?.addEmbedding(embedding, length + 1, {
-				id: articleDetails.id,
-				date: date.toISOString(),
-				num: articleDetails.num,
-				codeTitle: codeTitle,
-				sentence: `${chunk.substring(0, 30)}...`, // Store the first 30 characters of the chunk
-			});
-		}
-
-		if (this.#abortController.controller.signal.aborted) {
-			throw new Error("Operation aborted");
-		}
-
-		try {
-			//insert article in database
-			await legiFranceCodeArticleRepository.create({
-				id: articleDetails.id,
-				codeId: codeId,
-				number: articleDetails.num,
-				text: articleDetails.texte,
-				state: articleDetails.etat,
-				startDate: date,
-				endDate: articleDetails.dateFin
-					? new Date(articleDetails.dateFin)
-					: new Date(Date.now()),
-			});
-		} catch (_error) {
-			// update article in database
-			await legiFranceCodeArticleRepository.update({
-				id: articleDetails.id,
-				codeId: codeId,
-				number: articleDetails.num,
-				text: articleDetails.texte,
-				state: articleDetails.etat,
-				startDate: date,
-				endDate: articleDetails.dateFin
-					? new Date(articleDetails.dateFin)
-					: new Date(Date.now()),
-			});
 		}
 	}
 }
@@ -377,10 +220,10 @@ export class LegiFranceCodesReset extends LegiFranceBase {
 			}
 		}
 
-		await legiFranceCodeArticleRepository.deleteTable();
-		await legiFranceCodeRepository.deleteTable();
+		await legiFranceArticleRepository.deleteTable();
+		await legiFranceCodeOrLawRepository.deleteTable();
 
-		legiFranceCodeRepository.disconnect();
-		legiFranceCodeArticleRepository.disconnect();
+		await legiFranceCodeOrLawRepository.disconnect();
+		await legiFranceArticleRepository.disconnect();
 	}
 }
