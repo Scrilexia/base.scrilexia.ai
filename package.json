@@ -28,7 +28,8 @@
 		"@qdrant/js-client-rest": "^1.14.1",
 		"axios": "^1.13.2",
 		"express": "^5.1.0",
-		"langchain": "^0.3.24"
+		"langchain": "^0.3.24",
+		"mysql2": "^3.15.3"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "1.9.2",

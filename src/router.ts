@@ -4,6 +4,7 @@ import {
 	legiFranceAddArticlesAndLaws,
 	legiFranceAddArticlesAndLawsStatus,
 	legiFranceAddArticlesStatus,
+	legiFranceResetArticles,
 } from "./modules/lib/legiFranceActions";
 
 import {
@@ -14,7 +15,8 @@ import {
 const router = express.Router();
 
 router.post("/api/articles", legiFranceAddArticles);
-router.post("/api/aricles/status", legiFranceAddArticlesStatus);
+router.post("/api/articles/status", legiFranceAddArticlesStatus);
+router.post("/api/articles/reset", legiFranceResetArticles);
 
 router.post("/api/decisions/import", judilibreDecisionsImportation);
 router.post("/api/decisions/status", judilibreDecisionsImportationStatus);

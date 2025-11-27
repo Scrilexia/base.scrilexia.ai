@@ -3651,6 +3651,7 @@ export interface QdrantClientInterface {
 	): Promise<boolean>;
 	deleteCollection(name: string): Promise<boolean>;
 	getCollection(name: string): Promise<unknown>;
+	getCollections(): Promise<unknown>;
 	collectionExists(name: string): Promise<{ exists: boolean }>;
 	upsert(collection: string, data: unknown): Promise<unknown>;
 	query(

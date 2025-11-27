@@ -1,14 +1,19 @@
-import type { AxiosResponse } from "axios";
+import { InferenceClient } from "@huggingface/inference";
 import { CHUNK_SIZE } from "../../types/constants";
 import { Abort } from "../../utils/abortController";
 import {
 	connectLegiFrance,
 	getEnvValue,
-	httpRequest,
 	legiFrancePostRequest,
 } from "../../utils/environment";
+import type { Collection } from "../vector/collection";
 import vectorManager from "../vector/vectorManager";
+import { Vector } from "../vector/vectorUtils";
 import { LegiFranceBase } from "./legiFrance";
+import {
+	legiFranceCodeArticleRepository,
+	legiFranceCodeRepository,
+} from "./legiFranceCodeArticleRepository";
 import {
 	ArticleSearchResult,
 	CodeSearchResult,
@@ -16,9 +21,6 @@ import {
 	type LegiFranceCodeArticleOnline,
 	type LegiFranceCodeOnline,
 } from "./legiFranceTypes";
-import { InferenceClient } from "@huggingface/inference";
-import type { Collection } from "../vector/collection";
-import { Vector } from "../vector/vectorUtils";
 
 export class LegiFranceCodes extends LegiFranceBase {
 	#code: string;
@@ -47,6 +49,9 @@ export class LegiFranceCodes extends LegiFranceBase {
 
 	async addArticles(): Promise<void> {
 		// Implementation to add articles based on this.#code
+		await legiFranceCodeRepository.initializeDatabase();
+		await legiFranceCodeArticleRepository.initializeDatabase();
+
 		await connectLegiFrance();
 		this.#hfToken = getEnvValue("hugging_face_token");
 		this.#hfModel = getEnvValue("hugging_face_embedding_model");
@@ -73,16 +78,39 @@ export class LegiFranceCodes extends LegiFranceBase {
 			this.#collection = await vectorManager.getCollection(collectionName);
 		}
 
-		const code = await this.#searchCodes(this.#code);
+		const code = await this.searchCodes();
 
 		if (!code) {
 			throw new Error(`Code not found: ${this.#code}`);
 		}
 
-		await this.#retrieveArticlesIdsFromCode(code);
+		try {
+			legiFranceCodeRepository.create({
+				id: code.id,
+				title: code.titre,
+				titleFull: code.titre,
+				state: code.etat,
+				startDate: new Date(code.dateDebut),
+				endDate: code.dateFin ? new Date(code.dateFin) : new Date(Date.now()),
+			});
+		} catch (_error) {
+			// already exists
+			legiFranceCodeRepository.update({
+				id: code.id,
+				title: code.titre,
+				titleFull: code.titre,
+				state: code.etat,
+				startDate: new Date(code.dateDebut),
+				endDate: code.dateFin ? new Date(code.dateFin) : new Date(Date.now()),
+			});
+		}
+
+		await this.retrieveArticlesIdsFromCode(code);
+		legiFranceCodeRepository.disconnect();
+		legiFranceCodeArticleRepository.disconnect();
 	}
 
-	async #searchCodes(code: string): Promise<CodeSearchResult | null> {
+	private async searchCodes(): Promise<CodeSearchResult | null> {
 		const body = {
 			sort: "TITLE_ASC",
 			pageSize: 10,
@@ -115,7 +143,9 @@ export class LegiFranceCodes extends LegiFranceBase {
 		}
 	}
 
-	async #retrieveArticlesIdsFromCode(code: CodeSearchResult): Promise<void> {
+	private async retrieveArticlesIdsFromCode(
+		code: CodeSearchResult,
+	): Promise<void> {
 		// Implementation to retrieve article IDs from the code
 		this.#abortController.reset();
 
@@ -192,7 +222,11 @@ export class LegiFranceCodes extends LegiFranceBase {
 				),
 			);
 
-			await this.insertCodeArticlesAccordingIds(sortedArticlesIds, code.titre);
+			await this.insertCodeArticlesAccordingIds(
+				sortedArticlesIds,
+				code.id,
+				code.titre,
+			);
 		} catch (error) {
 			console.error(error);
 		}
@@ -200,6 +234,7 @@ export class LegiFranceCodes extends LegiFranceBase {
 
 	private async insertCodeArticlesAccordingIds(
 		articles: LegiFranceCodeArticleOnline[],
+		codeId: string,
 		codeTitle: string,
 	) {
 		if (!articles || articles.length === 0) {
@@ -211,7 +246,7 @@ export class LegiFranceCodes extends LegiFranceBase {
 			console.log(
 				`Article ${articleDetails.num} du ${codeTitle} (${++index}/${articles.length})`,
 			);
-			await this.insertCodeArticle(articleDetails, codeTitle);
+			await this.insertCodeArticle(articleDetails, codeId, codeTitle);
 		}
 	}
 
@@ -240,6 +275,7 @@ export class LegiFranceCodes extends LegiFranceBase {
 
 	private async insertCodeArticle(
 		articleDetails: ArticleSearchResult,
+		codeId: string,
 		codeTitle: string,
 	): Promise<void> {
 		if (
@@ -304,8 +340,47 @@ export class LegiFranceCodes extends LegiFranceBase {
 
 		try {
 			//insert article in database
+			await legiFranceCodeArticleRepository.create({
+				id: articleDetails.id,
+				codeId: codeId,
+				number: articleDetails.num,
+				text: articleDetails.texte,
+				state: articleDetails.etat,
+				startDate: date,
+				endDate: articleDetails.dateFin
+					? new Date(articleDetails.dateFin)
+					: new Date(Date.now()),
+			});
 		} catch (_error) {
 			// update article in database
+			await legiFranceCodeArticleRepository.update({
+				id: articleDetails.id,
+				codeId: codeId,
+				number: articleDetails.num,
+				text: articleDetails.texte,
+				state: articleDetails.etat,
+				startDate: date,
+				endDate: articleDetails.dateFin
+					? new Date(articleDetails.dateFin)
+					: new Date(Date.now()),
+			});
 		}
+	}
+}
+
+export class LegiFranceCodesReset extends LegiFranceBase {
+	async resetArticles(): Promise<void> {
+		const collections = await vectorManager.getCollections();
+		for (const collectionName of collections) {
+			if (collectionName.startsWith("legifrance_embeddings_")) {
+				await vectorManager.deleteCollection(collectionName);
+			}
+		}
+
+		await legiFranceCodeArticleRepository.deleteTable();
+		await legiFranceCodeRepository.deleteTable();
+
+		legiFranceCodeRepository.disconnect();
+		legiFranceCodeArticleRepository.disconnect();
 	}
 }

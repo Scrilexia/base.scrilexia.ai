@@ -57,7 +57,7 @@ class VectorManager {
 		}
 
 		await trySeveralTimes<void>(async () => {
-			await this.#client.collectionExists(collectionName);
+			await this.#client.deleteCollection(collectionName);
 		});
 	}
 
@@ -78,6 +78,28 @@ class VectorManager {
 				error.message.includes("Collection not found")
 			) {
 				throw new Error(`Collection ${collectionName} does not exist.`);
+			}
+			throw error; // Re-throw unexpected errors
+		}
+	}
+
+	async getCollections(): Promise<string[]> {
+		if (!this.#initialized) {
+			await this.initialize();
+		}
+
+		try {
+			const collections = (await trySeveralTimes<unknown>(async () => {
+				return await this.#client.getCollections();
+			})) as { collections: { name: string }[] };
+
+			return collections.collections.map((col) => col.name);
+		} catch (error) {
+			if (
+				error instanceof Error &&
+				error.message.includes("Collection not found")
+			) {
+				throw new Error("No collections exist.");
 			}
 			throw error; // Re-throw unexpected errors
 		}

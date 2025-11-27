@@ -1,5 +1,5 @@
 import type { RequestHandler } from "express";
-import { LegiFranceCodes } from "./legiFranceCodes";
+import { LegiFranceCodes, LegiFranceCodesReset } from "./legiFranceCodes";
 
 export const legiFranceAddArticles: RequestHandler = async (req, res, next) => {
 	const legiFrance = new LegiFranceCodes(req.body.code);
@@ -15,6 +15,15 @@ export const legiFranceAddArticlesStatus: RequestHandler = async (
 	res.status(200).send("OK");
 };
 
+export const legiFranceResetArticles: RequestHandler = async (
+	req,
+	res,
+	next,
+) => {
+	const legiFrance = new LegiFranceCodesReset();
+	await legiFrance.resetArticles();
+	res.status(200).send("OK");
+};
 export const legiFranceAddArticlesAndLaws: RequestHandler = async (
 	req,
 	res,
