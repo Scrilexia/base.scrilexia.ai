@@ -9,7 +9,7 @@ COPY ./biome.json ./
 COPY ./tsconfig.json ./
 
 # Install dependencies for both client and server
-RUN npm install --workspaces --legacy-peer-deps
+RUN npm install --legacy-peer-deps
 
 # Build the application
 RUN npm run build
