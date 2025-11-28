@@ -133,16 +133,16 @@ class VectorManager {
 		if (!qdrantPort) {
 			throw new Error("Qdrant port is not defined in environment variables");
 		}
-		const qdrantUrl = getEnvValue("qdrant_url");
-		if (!qdrantUrl) {
-			throw new Error("Qdrant URL is not defined in environment variables");
+		const qdrantHost = getEnvValue("qdrant_host");
+		if (!qdrantHost) {
+			throw new Error("Qdrant host is not defined in environment variables");
 		}
 		const apiKey = getEnvValue("qdrant_api_key");
 		if (!apiKey) {
 			throw new Error("Qdrant API key is not defined in environment variables");
 		}
 		return new QdrantClient({
-			url: qdrantUrl,
+			host: qdrantHost,
 			port: Number.parseInt(qdrantPort),
 			apiKey: apiKey,
 		}) as QdrantClientInterface;
