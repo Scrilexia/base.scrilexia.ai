@@ -313,6 +313,7 @@ export async function trySeveralTimes<ReturnType>(
 			return await codeToExecute();
 		} catch (error) {
 			attempts++;
+			console.error(`Error on attempt ${attempts}:`, error);
 			if (attempts < maxAttempts) {
 				console.warn(`Attempt ${attempts} failed. Retrying...`);
 				await new Promise((resolve) =>
