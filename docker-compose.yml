@@ -21,7 +21,7 @@ services:
       - mysql_legifrance_judilibre_data:/var/lib/mysql
   legifrance-judilibre:
     build: .
-    container_name: core
+    container_name: legifrance-judilibre-core
     ports:
       - "4310:4310"
     restart: unless-stopped
