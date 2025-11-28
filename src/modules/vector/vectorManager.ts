@@ -141,6 +141,7 @@ class VectorManager {
 		if (!apiKey) {
 			throw new Error("Qdrant API key is not defined in environment variables");
 		}
+		console.log(`Connecting to Qdrant at ${qdrantHost}:${qdrantPort}`);
 		return new QdrantClient({
 			host: qdrantHost,
 			port: Number.parseInt(qdrantPort),
