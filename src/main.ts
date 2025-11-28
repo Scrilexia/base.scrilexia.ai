@@ -7,10 +7,10 @@ import {
 
 setCurrentDirectory();
 
-let serverPort = getEnvValue("scrilexia_port");
+let serverPort = getEnvValue("legifrance_port");
 if (!serverPort) {
 	serverPort = "3310";
-	setEnvValue("scrilexia_port", serverPort);
+	setEnvValue("legifrance_port", serverPort);
 }
 
 try {

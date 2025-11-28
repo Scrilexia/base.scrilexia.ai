@@ -15,22 +15,22 @@ export class BaseRepository {
 
 	constructor() {
 		this.client = undefined as unknown as IDatabase;
-		const host = getEnvValue("dbHost");
+		const host = getEnvValue("dbLfHost");
 		if (!host) {
 			throw new Error("Database host is not defined in environment variables.");
 		}
 		this.host = host;
-		const portString = getEnvValue("dbPort");
+		const portString = getEnvValue("dbLfPort");
 		if (!portString) {
 			throw new Error("Database port is not defined in environment variables.");
 		}
 		this.port = Number.parseInt(portString, 10);
-		const user = getEnvValue("dbUser");
+		const user = getEnvValue("dbLfUser");
 		if (!user) {
 			throw new Error("Database user is not defined in environment variables.");
 		}
 		this.user = user;
-		const password = getEnvValue("dbPassword");
+		const password = getEnvValue("dbLfPassword");
 		if (!password) {
 			throw new Error(
 				"Database password is not defined in environment variables.",
@@ -47,7 +47,7 @@ export class BaseRepository {
 				"Database root user is not defined in environment variables.",
 			);
 		}
-		const passwordRoot = getEnvValue("dbPasswordRoot");
+		const passwordRoot = getEnvValue("dbLfPasswordRoot");
 		if (!passwordRoot) {
 			throw new Error(
 				"Database password for root user is not defined in environment variables.",

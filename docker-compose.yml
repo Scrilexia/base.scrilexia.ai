@@ -1,0 +1,31 @@
+name: scrilexia-ai
+services:
+  qdrant:
+    image: qdrant/qdrant
+    container_name: qdrant_legifrance_judilibre
+    restart: always
+    ports:
+      - "4320:6333"
+    volumes:
+      - qdrant_legifrance_judilibre_data:/qdrant/storage
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-legifrance-judilibre
+    ports:
+      - "4316:3306"
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: 9897@Scrilexia3735
+      MYSQL_PASSWORD:    9897@Scrilexia3735
+    volumes:
+      - mysql_legifrance_judilibre_data:/var/lib/mysql
+  legifrance-judilibre:
+    build: .
+    container_name: core
+    ports:
+      - "4310:4310"
+    restart: unless-stopped
+
+volumes:
+  qdrant_legifrance_judilibre_data:
+  mysql_legifrance_judilibre_data:
