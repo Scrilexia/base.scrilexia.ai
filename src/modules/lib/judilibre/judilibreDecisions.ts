@@ -171,7 +171,7 @@ export class JudilibreDecisions {
 						await judilibreRepository.create({
 							id: decision.id,
 							jurisdiction: decision.jurisdiction,
-							location: decision.location,
+							location: decision.location ?? decision.jurisdiction,
 							chamber: decision.chamber,
 							number: decision.number,
 							decisionDate: decision.decision_date,
@@ -185,7 +185,7 @@ export class JudilibreDecisions {
 						await judilibreRepository.update({
 							id: decision.id,
 							jurisdiction: decision.jurisdiction,
-							location: decision.location,
+							location: decision.location ?? decision.jurisdiction,
 							chamber: decision.chamber,
 							number: decision.number,
 							decisionDate: decision.decision_date,
