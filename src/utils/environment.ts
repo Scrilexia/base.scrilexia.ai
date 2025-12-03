@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import axios, { type AxiosResponse, type AxiosRequestConfig } from "axios";
+import { TokenTextSplitter } from "langchain/text_splitter";
 
 export function setCurrentDirectory() {
 	try {
@@ -313,7 +314,6 @@ export async function trySeveralTimes<ReturnType>(
 			return await codeToExecute();
 		} catch (error) {
 			attempts++;
-			console.error(`Error on attempt ${attempts}:`, error);
 			if (attempts < maxAttempts) {
 				console.warn(`Attempt ${attempts} failed. Retrying...`);
 				await new Promise((resolve) =>
@@ -346,8 +346,8 @@ export function shortenWithEllipsis(text: string): string {
 
 	if (len <= 60) return text;
 
-	const start = text.slice(0, part);
-	const end = text.slice(-part);
+	const start = text.slice(0, part).replace(/\n/g, "").trimStart();
+	const end = text.slice(-part).replace(/\n/g, "").trimEnd();
 
 	return `${start}...${end}`;
 }
@@ -375,6 +375,18 @@ export class UrlParts {
 		this.parameters = parameters;
 		this.fragment = fragment;
 	}
+}
+
+export async function splitTextWithtokens(
+	text: string,
+	chunkSize: number,
+): Promise<string[]> {
+	if (!text || text.trim() === "") {
+		return [];
+	}
+	// Split the text into chunks based on the specified chunk size
+	const splitter = new TokenTextSplitter({ chunkSize, chunkOverlap: 10 });
+	return await splitter.splitText(text);
 }
 
 export function parseURL(url: string): UrlParts {

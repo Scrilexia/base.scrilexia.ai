@@ -37,6 +37,28 @@ export class Collection {
 		});
 	}
 
+	async search(criteria: Record<string, string>): Promise<QdrantResult> {
+		if (!this.#client) {
+			throw new Error("Qdrant client is not initialized");
+		}
+
+		const result = await trySeveralTimes<QdrantResult>(async () => {
+			return await this.#client.query(this.#collectionName, {
+				filter: {
+					must: Object.entries(criteria).map(([key, value]) => ({
+						key: key,
+						match: { value: value },
+					})),
+				},
+				limit: 20,
+				with_payload: true,
+				with_vector: false,
+			});
+		});
+
+		return result;
+	}
+
 	async searchByAlias(alias: string): Promise<QdrantResult> {
 		if (!this.#client) {
 			throw new Error("Qdrant client is not initialized");

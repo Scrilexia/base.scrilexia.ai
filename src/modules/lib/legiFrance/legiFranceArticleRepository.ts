@@ -1,7 +1,7 @@
-import { getEnvValue } from "../../utils/environment";
-import type { Result, Rows } from "../database/manager";
-import { Schema } from "../database/schema";
-import { BaseRepository } from "./repositoryManager";
+import { getEnvValue } from "../../../utils/environment";
+import type { Result, Rows } from "../../database/manager";
+import { Schema } from "../../database/schema";
+import { BaseRepository } from "../repositoryManager";
 
 export type LegiFranceCode = {
 	id: string;

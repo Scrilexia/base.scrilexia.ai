@@ -2,7 +2,7 @@ import type { RequestHandler } from "express";
 import {
 	legiFranceAddArticlesAbortController,
 	legiFranceAddArticlesAndLawsAbortController,
-} from "../../router";
+} from "../../../router";
 import { LegiFranceCodes, LegiFranceCodesReset } from "./legiFranceCodes";
 import { LegiFranceLaws } from "./legiFranceLaws";
 
@@ -55,7 +55,7 @@ export const legiFranceAddArticlesAndLaws: RequestHandler = async (
 	res.status(200).send("OK");
 };
 
-export const legiFranceAddAndLawsArticlesAbort: RequestHandler = async (
+export const legiFranceAddArticlesAndLawsAbort: RequestHandler = async (
 	req,
 	res,
 	next,

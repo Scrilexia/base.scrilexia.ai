@@ -1,4 +1,4 @@
-import { legiFrancePostRequest, searchDate } from "../../utils/environment";
+import { legiFrancePostRequest, searchDate } from "../../../utils/environment";
 import { LegiFranceBase } from "./legiFrance";
 import { legiFranceCodeOrLawRepository } from "./legiFranceArticleRepository";
 import {

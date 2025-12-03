@@ -1,22 +1,25 @@
 import express from "express";
 import {
-	legiFranceAddAndLawsArticlesAbort as legiFranceAddArticlesAndLawsAbort,
 	legiFranceAddArticles,
 	legiFranceAddArticlesAbort,
 	legiFranceAddArticlesAndLaws,
+	legiFranceAddArticlesAndLawsAbort,
 	legiFranceAddArticlesAndLawsStatus,
 	legiFranceAddArticlesStatus,
 	legiFranceResetArticles,
-} from "./modules/lib/legiFranceActions";
+} from "./modules/lib/legiFrance/legiFranceActions";
 
 import {
 	judilibreDecisionsImportation,
+	judilibreDecisionsImportationAbort,
+	judilibreDecisionsImportationReset,
 	judilibreDecisionsImportationStatus,
-} from "./modules/lib/judilibreActions";
+} from "./modules/lib/judilibre/judilibreActions";
 import { Abort } from "./utils/abortController";
 
 export const legiFranceAddArticlesAbortController = new Abort();
 export const legiFranceAddArticlesAndLawsAbortController = new Abort();
+export const judilibreDecisionsImportationAbortController = new Abort();
 
 const router = express.Router();
 
@@ -25,8 +28,10 @@ router.post("/api/articles/status", legiFranceAddArticlesStatus);
 router.post("/api/articles/abort", legiFranceAddArticlesAbort);
 router.post("/api/articles/reset", legiFranceResetArticles);
 
-router.post("/api/decisions/import", judilibreDecisionsImportation);
+router.post("/api/decisions", judilibreDecisionsImportation);
 router.post("/api/decisions/status", judilibreDecisionsImportationStatus);
+router.post("/api/decisions/abort", judilibreDecisionsImportationAbort);
+router.post("/api/decisions/reset", judilibreDecisionsImportationReset);
 
 router.post("/api/laws", legiFranceAddArticlesAndLaws);
 router.post("/api/laws/status", legiFranceAddArticlesAndLawsStatus);

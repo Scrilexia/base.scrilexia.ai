@@ -3,7 +3,6 @@ import { Collection } from "./collection";
 import type { QdrantClientInterface } from "./params";
 
 class VectorManager {
-	#collectionName!: string;
 	#client!: QdrantClientInterface;
 	#initialized: boolean;
 	#size = 768;
@@ -67,10 +66,6 @@ class VectorManager {
 		}
 
 		try {
-			const collection = await trySeveralTimes<unknown>(async () => {
-				return await this.#client.getCollection(collectionName);
-			});
-
 			return new Collection(this.#client, collectionName);
 		} catch (error) {
 			if (
@@ -141,7 +136,7 @@ class VectorManager {
 		if (!apiKey) {
 			throw new Error("Qdrant API key is not defined in environment variables");
 		}
-		console.log(`Connecting to Qdrant at ${qdrantUrl}:${qdrantPort}`);
+
 		return new QdrantClient({
 			url: qdrantUrl,
 			port: Number.parseInt(qdrantPort),

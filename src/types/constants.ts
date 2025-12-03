@@ -1,4 +1,5 @@
 export const CHUNK_SIZE = 600;
+export const DECISIONS_BLOCK_SIZE = 1000;
 
 export enum Codes {
 	CODE_ACTION_SOCIALE_FAMILLES = "Code de l'action sociale et des familles",

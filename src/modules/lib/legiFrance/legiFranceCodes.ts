@@ -1,5 +1,5 @@
-import type { Abort } from "../../utils/abortController";
-import vectorManager from "../vector/vectorManager";
+import type { Abort } from "../../../utils/abortController";
+import vectorManager from "../../vector/vectorManager";
 import { LegiFranceBase } from "./legiFrance";
 import {
 	legiFranceArticleRepository,

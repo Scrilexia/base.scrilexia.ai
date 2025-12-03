@@ -6,10 +6,11 @@ import {
 	httpRequest,
 	legiFrancePostRequest,
 	removeEnv,
+	splitTextWithtokens,
 	toDate,
-} from "../../utils/environment";
-import type { Collection } from "../vector/collection";
-import vectorManager from "../vector/vectorManager";
+} from "../../../utils/environment";
+import type { Collection } from "../../vector/collection";
+import vectorManager from "../../vector/vectorManager";
 import {
 	legiFranceArticleRepository,
 	legiFranceCodeOrLawRepository,
@@ -21,9 +22,9 @@ import {
 } from "./legiFranceTypes";
 
 import { TokenTextSplitter } from "langchain/text_splitter";
-import { CHUNK_SIZE } from "../../types/constants";
-import type { Abort } from "../../utils/abortController";
-import { Vector } from "../vector/vectorUtils";
+import { CHUNK_SIZE } from "../../../types/constants";
+import type { Abort } from "../../../utils/abortController";
+import { Vector } from "../../vector/vectorUtils";
 
 export class LegiFranceBase {
 	protected hfToken: string | null = null;
@@ -163,18 +164,6 @@ export class LegiFranceBase {
 		return value;
 	}
 
-	protected async splitTextWithtokens(
-		text: string,
-		chunkSize: number,
-	): Promise<string[]> {
-		if (!text || text.trim() === "") {
-			return [];
-		}
-		// Split the text into chunks based on the specified chunk size
-		const splitter = new TokenTextSplitter({ chunkSize, chunkOverlap: 10 });
-		return await splitter.splitText(text);
-	}
-
 	protected async searchArticleById(id: string): Promise<ArticleSearchResult> {
 		const body = {
 			id: id,
@@ -212,10 +201,7 @@ export class LegiFranceBase {
 			return;
 		}
 
-		const chunks = await this.splitTextWithtokens(
-			articleDetails.texte,
-			CHUNK_SIZE,
-		);
+		const chunks = await splitTextWithtokens(articleDetails.texte, CHUNK_SIZE);
 
 		const hf = new InferenceClient(this.hfToken as string);
 
@@ -246,7 +232,17 @@ export class LegiFranceBase {
 			}
 
 			const length = (await this.collection?.getCount()) ?? 0;
-			await this.collection?.addEmbedding(embedding, length + 1, {
+			let index = length + 1;
+			const searchResult = await this.collection?.search({
+				id: articleDetails.id,
+				num: articleDetails.num,
+				lawTitle: codeOrLawTitle,
+				sentence: `${chunk.substring(0, 30)}...`,
+			});
+			if (searchResult && searchResult.points.length > 0) {
+				index = searchResult.points[0].id as number;
+			}
+			await this.collection?.addEmbedding(embedding, index, {
 				id: articleDetails.id,
 				date: articleDetails.dateVersion,
 				num: articleDetails.num,
