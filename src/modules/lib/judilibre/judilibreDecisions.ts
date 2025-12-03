@@ -18,8 +18,8 @@ import {
 import type { Collection } from "../../vector/collection";
 import vectorManager from "../../vector/vectorManager";
 import { Vector } from "../../vector/vectorUtils";
-import type { JudiDecision, Jurisdiction } from "./judilibreTypes";
 import { judilibreRepository } from "./judilibreRepository";
+import type { JudiDecision, Jurisdiction } from "./judilibreTypes";
 
 type addEmbedding = (
 	embedding: number[],
@@ -177,9 +177,9 @@ export class JudilibreDecisions {
 							decisionDate: decision.decision_date,
 							type: decision.type,
 							solution: decision.solution,
-							summary: decision.summary,
-							themes: decision.themes,
-							visas: decision.visas.map((visa) => visa.title),
+							summary: decision.summary || "",
+							themes: decision.themes || [],
+							visas: decision.visas?.map((visa) => visa.title) || [],
 						});
 					} catch (error) {
 						await judilibreRepository.update({
@@ -191,9 +191,9 @@ export class JudilibreDecisions {
 							decisionDate: decision.decision_date,
 							type: decision.type,
 							solution: decision.solution,
-							summary: decision.summary,
-							themes: decision.themes,
-							visas: decision.visas.map((visa) => visa.title),
+							summary: decision.summary || "",
+							themes: decision.themes || [],
+							visas: decision.visas?.map((visa) => visa.title) || [],
 						});
 					}
 
