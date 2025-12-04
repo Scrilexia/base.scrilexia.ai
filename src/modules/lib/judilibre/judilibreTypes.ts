@@ -65,7 +65,8 @@ export class JudiDecision {
 	themes: string[];
 	titlesAndSummaries: TitlesAndSummary[];
 	zones: TextZoneSegments;
-	visas: Visa[];
+	visa: Visa[];
+	visas: string[];
 
 	constructor(
 		id = "",
@@ -81,6 +82,7 @@ export class JudiDecision {
 		themes = [],
 		titlesAndSummaries = [],
 		zones = new TextZoneSegments(),
+		visa = [],
 		visas = [],
 	) {
 		this.id = id;
@@ -96,6 +98,7 @@ export class JudiDecision {
 		this.summary = summary;
 		this.themes = themes;
 		this.zones = zones;
+		this.visa = visa;
 		this.visas = visas;
 	}
 }

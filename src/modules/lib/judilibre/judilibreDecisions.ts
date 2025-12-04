@@ -3,7 +3,11 @@ import {
 	InferenceClient,
 } from "@huggingface/inference";
 import type { AxiosResponse } from "axios";
-import { CHUNK_SIZE, DECISIONS_BLOCK_SIZE } from "../../../types/constants";
+import {
+	CHUNK_SIZE,
+	Codes,
+	DECISIONS_BLOCK_SIZE,
+} from "../../../types/constants";
 import type { Abort } from "../../../utils/abortController";
 import {
 	connect_piste,
@@ -19,7 +23,7 @@ import type { Collection } from "../../vector/collection";
 import vectorManager from "../../vector/vectorManager";
 import { Vector } from "../../vector/vectorUtils";
 import { judilibreRepository } from "./judilibreRepository";
-import type { JudiDecision, Jurisdiction } from "./judilibreTypes";
+import type { JudiDecision, Jurisdiction, Visa } from "./judilibreTypes";
 
 type addEmbedding = (
 	embedding: number[],
@@ -115,16 +119,23 @@ export class JudilibreDecisions {
 
 					decision.summary = summary;
 
+					if (decision.visa && decision.visa.length > 0) {
+						decision.visas = this.parseArticles(decision.visa);
+					} else {
+						decision.visas = [];
+					}
+
+					const { dataToInsert, dataToSearch } =
+						this.buildDataToInsert(decision);
+
 					if (decision.summary && decision.summary.trim() !== "") {
 						await this.addEmbeddingsbySentences(
 							decision.summary,
 							"summary",
 							async (embedding: number[], zone: string, sentence: string) => {
-								const { dataToInsert, dataToSearch } = this.buildDataToInsert(
-									decision,
-									zone,
-									sentence,
-								);
+								dataToInsert.zone = zone;
+								dataToInsert.sentence = sentence;
+								dataToSearch.sentence = sentence;
 
 								const length = (await this.collection?.getCount()) ?? 0;
 								let index = length + 1;
@@ -146,11 +157,9 @@ export class JudilibreDecisions {
 					await this.buildEmbeddingsFromTextZoneSegments(
 						decision,
 						async (embedding: number[], zone: string, sentence: string) => {
-							const { dataToInsert, dataToSearch } = this.buildDataToInsert(
-								decision,
-								zone,
-								sentence,
-							);
+							dataToInsert.zone = zone;
+							dataToInsert.sentence = sentence;
+							dataToSearch.sentence = sentence;
 
 							const length = (await this.collection?.getCount()) ?? 0;
 							let index = length + 1;
@@ -179,7 +188,7 @@ export class JudilibreDecisions {
 							solution: decision.solution,
 							summary: decision.summary || "",
 							themes: decision.themes || [],
-							visas: decision.visas?.map((visa) => visa.title) || [],
+							visas: decision.visas,
 						});
 					} catch (error) {
 						await judilibreRepository.update({
@@ -193,7 +202,7 @@ export class JudilibreDecisions {
 							solution: decision.solution,
 							summary: decision.summary || "",
 							themes: decision.themes || [],
-							visas: decision.visas?.map((visa) => visa.title) || [],
+							visas: decision.visas,
 						});
 					}
 
@@ -213,6 +222,11 @@ export class JudilibreDecisions {
 			);
 		}
 	}
+
+	parseArticles(visa: Visa[]): string[] {
+		return visa.map((article) => this.stripHTMLTags(article.title));
+	}
+
 	buildDate(date: string): string {
 		const dateObject = new Date(date);
 		const options: Intl.DateTimeFormatOptions = {
@@ -224,11 +238,7 @@ export class JudilibreDecisions {
 		return new Intl.DateTimeFormat("fr-FR", options).format(dateObject);
 	}
 
-	private buildDataToInsert(
-		decision: JudiDecision,
-		zone: string,
-		sentence: string,
-	): {
+	private buildDataToInsert(decision: JudiDecision): {
 		dataToInsert: Record<string, string | object>;
 		dataToSearch: Record<string, string>;
 	} {
@@ -238,8 +248,6 @@ export class JudilibreDecisions {
 			jurisdiction: decision.jurisdiction,
 			chamber: decision.chamber,
 			number: decision.number,
-			zone: zone,
-			sentence: sentence,
 		};
 		const dataToSearch = {
 			id: decision.id,
@@ -247,21 +255,24 @@ export class JudilibreDecisions {
 			jurisdiction: decision.jurisdiction,
 			chamber: decision.chamber,
 			number: decision.number,
-			sentence: sentence,
 		};
 
 		if (decision.location) dataToInsert.location = decision.location as string;
-		if (decision.themes && decision.themes.length > 0)
-			dataToInsert.themes = decision.themes as string[];
 		if (decision.summary) {
 			dataToInsert.summary = decision.summary as string;
 		} else if (decision.titlesAndSummaries.length > 0) {
 			dataToInsert.summary = decision.titlesAndSummaries[0].summary;
 		}
-		if (decision.visas && decision.visas.length > 0)
-			dataToInsert.visas = decision.visas.map((visa) => visa.title);
 
 		return { dataToInsert, dataToSearch };
+	}
+
+	private stripHTMLTags(input: string): string {
+		let stripped = input.replace(/<\/?[^>]+(>|$)/g, "");
+		stripped = stripped.replace(/R\.?\s/g, "R");
+		stripped = stripped.replace(/D\.?\s/g, "D");
+		stripped = stripped.replace(/L\.?\s/g, "L");
+		return stripped;
 	}
 
 	private async prepareDatabases(): Promise<void> {
