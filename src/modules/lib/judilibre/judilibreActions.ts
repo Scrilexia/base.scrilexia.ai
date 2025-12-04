@@ -10,6 +10,7 @@ export const judilibreDecisionsImportation: RequestHandler = async (
 	res,
 	next,
 ) => {
+	judilibreDecisionsImportationAbortController.reset();
 	const judilibreDecisions = new JudilibreDecisions(
 		req.body.jurisdiction,
 		new Date(req.body.end_date),
@@ -42,6 +43,7 @@ export const judilibreDecisionsImportationReset: RequestHandler = async (
 	res,
 	next,
 ) => {
+	judilibreDecisionsImportationAbortController.reset();
 	const legiFrance = new JudilibreDecisionsReset(
 		judilibreDecisionsImportationAbortController,
 	);

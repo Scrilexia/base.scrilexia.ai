@@ -7,6 +7,7 @@ import { LegiFranceCodes, LegiFranceCodesReset } from "./legiFranceCodes";
 import { LegiFranceLaws } from "./legiFranceLaws";
 
 export const legiFranceAddArticles: RequestHandler = async (req, res, next) => {
+	legiFranceAddArticlesAbortController.reset();
 	const legiFrance = new LegiFranceCodes(
 		req.body.code,
 		legiFranceAddArticlesAbortController,
@@ -37,6 +38,7 @@ export const legiFranceResetArticles: RequestHandler = async (
 	res,
 	next,
 ) => {
+	legiFranceAddArticlesAbortController.reset();
 	const legiFrance = new LegiFranceCodesReset(
 		legiFranceAddArticlesAbortController,
 	);
@@ -48,6 +50,7 @@ export const legiFranceAddArticlesAndLaws: RequestHandler = async (
 	res,
 	next,
 ) => {
+	legiFranceAddArticlesAndLawsAbortController.reset();
 	const legiFrance = new LegiFranceLaws(
 		legiFranceAddArticlesAndLawsAbortController,
 	);
