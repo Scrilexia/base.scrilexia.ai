@@ -13,8 +13,6 @@ export type JudilibreDecision = {
 	type: string;
 	solution: string;
 	summary: string;
-	themes: string[];
-	visas: string[];
 };
 
 class JudilibreRepository extends BaseRepository {
@@ -46,8 +44,6 @@ class JudilibreRepository extends BaseRepository {
 			schema.addColumn("type", "TEXT NOT NULL");
 			schema.addColumn("solution", "TEXT NOT NULL");
 			schema.addColumn("summary", "TEXT NOT NULL");
-			schema.addColumn("themes", "JSON NOT NULL");
-			schema.addColumn("visas", "JSON NOT NULL");
 			await this.client.createTable("jl_decision", schema);
 		}
 	}
@@ -58,8 +54,8 @@ class JudilibreRepository extends BaseRepository {
 		this.connect();
 
 		await this.client.query<Result>(
-			`INSERT INTO jl_decision (id, jurisdiction, location, chamber, number, decision_date, type, solution, summary, themes, visas)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			`INSERT INTO jl_decision (id, jurisdiction, location, chamber, number, decision_date, type, solution, summary)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			[
 				decision.id,
 				decision.jurisdiction,
@@ -70,8 +66,6 @@ class JudilibreRepository extends BaseRepository {
 				decision.type,
 				decision.solution,
 				decision.summary,
-				JSON.stringify(decision.themes),
-				JSON.stringify(decision.visas),
 			],
 		);
 	}
@@ -98,8 +92,6 @@ class JudilibreRepository extends BaseRepository {
 			type: row.type,
 			solution: row.solution,
 			summary: row.summary,
-			themes: JSON.parse(row.themes),
-			visas: JSON.parse(row.visas),
 		};
 	}
 
@@ -124,8 +116,6 @@ class JudilibreRepository extends BaseRepository {
 			type: row.type,
 			solution: row.solution,
 			summary: row.summary,
-			themes: JSON.parse(row.themes),
-			visas: JSON.parse(row.visas),
 		}));
 	}
 
@@ -135,7 +125,7 @@ class JudilibreRepository extends BaseRepository {
 
 		await this.client.query(
 			`UPDATE jl_decision 
-             SET jurisdiction = ?, location = ?, chamber = ?, number = ?, decision_date = ?, type = ?, solution = ?, summary = ?, themes = ?, visas = ?
+             SET jurisdiction = ?, location = ?, chamber = ?, number = ?, decision_date = ?, type = ?, solution = ?, summary = ?
              WHERE id = ?`,
 			[
 				decision.jurisdiction,
@@ -146,8 +136,6 @@ class JudilibreRepository extends BaseRepository {
 				decision.type,
 				decision.solution,
 				decision.summary,
-				JSON.stringify(decision.themes),
-				JSON.stringify(decision.visas),
 				decision.id,
 			],
 		);

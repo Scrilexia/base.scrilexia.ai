@@ -124,14 +124,42 @@ export class JudilibreDecisions {
 					} else {
 						decision.visas = [];
 					}
+					if (!decision.themes || decision.themes.length === 0) {
+						decision.themes = [];
+					}
 
 					const { dataToInsert, dataToSearch } =
 						this.buildDataToInsert(decision);
 
-					if (decision.summary && decision.summary.trim() !== "") {
-						await this.addEmbeddingsbySentences(
-							decision.summary,
-							"summary",
+					try {
+						if (decision.summary && decision.summary.trim() !== "") {
+							await this.addEmbeddingsbySentences(
+								decision.summary,
+								"summary",
+								async (embedding: number[], zone: string, sentence: string) => {
+									dataToInsert.zone = zone;
+									dataToInsert.sentence = sentence;
+									dataToSearch.sentence = sentence;
+
+									const length = (await this.collection?.getCount()) ?? 0;
+									let index = length + 1;
+									const searchResult =
+										await this.collection?.search(dataToSearch);
+
+									if (searchResult && searchResult.points.length > 0) {
+										index = searchResult.points[0].id as number;
+									}
+									await this.collection?.addEmbedding(
+										embedding,
+										index,
+										dataToInsert,
+									);
+								},
+							);
+						}
+
+						await this.buildEmbeddingsFromTextZoneSegments(
+							decision,
 							async (embedding: number[], zone: string, sentence: string) => {
 								dataToInsert.zone = zone;
 								dataToInsert.sentence = sentence;
@@ -152,58 +180,35 @@ export class JudilibreDecisions {
 								);
 							},
 						);
-					}
 
-					await this.buildEmbeddingsFromTextZoneSegments(
-						decision,
-						async (embedding: number[], zone: string, sentence: string) => {
-							dataToInsert.zone = zone;
-							dataToInsert.sentence = sentence;
-							dataToSearch.sentence = sentence;
-
-							const length = (await this.collection?.getCount()) ?? 0;
-							let index = length + 1;
-							const searchResult = await this.collection?.search(dataToSearch);
-
-							if (searchResult && searchResult.points.length > 0) {
-								index = searchResult.points[0].id as number;
-							}
-							await this.collection?.addEmbedding(
-								embedding,
-								index,
-								dataToInsert,
-							);
-						},
-					);
-
-					try {
-						await judilibreRepository.create({
-							id: decision.id,
-							jurisdiction: decision.jurisdiction,
-							location: decision.location ?? decision.jurisdiction,
-							chamber: decision.chamber,
-							number: decision.number,
-							decisionDate: decision.decision_date,
-							type: decision.type,
-							solution: decision.solution,
-							summary: decision.summary || "",
-							themes: decision.themes || [],
-							visas: decision.visas,
-						});
+						try {
+							await judilibreRepository.create({
+								id: decision.id,
+								jurisdiction: decision.jurisdiction,
+								location: decision.location ?? decision.jurisdiction,
+								chamber: decision.chamber,
+								number: decision.number,
+								decisionDate: decision.decision_date,
+								type: decision.type,
+								solution: decision.solution,
+								summary: decision.summary || "",
+							});
+						} catch (error) {
+							await judilibreRepository.update({
+								id: decision.id,
+								jurisdiction: decision.jurisdiction,
+								location: decision.location ?? decision.jurisdiction,
+								chamber: decision.chamber,
+								number: decision.number,
+								decisionDate: decision.decision_date,
+								type: decision.type,
+								solution: decision.solution,
+								summary: decision.summary || "",
+							});
+						}
 					} catch (error) {
-						await judilibreRepository.update({
-							id: decision.id,
-							jurisdiction: decision.jurisdiction,
-							location: decision.location ?? decision.jurisdiction,
-							chamber: decision.chamber,
-							number: decision.number,
-							decisionDate: decision.decision_date,
-							type: decision.type,
-							solution: decision.solution,
-							summary: decision.summary || "",
-							themes: decision.themes || [],
-							visas: decision.visas,
-						});
+						console.error(`Error processing decision ${decision.id}: ${error}`);
+						continue;
 					}
 
 					if (this.abortController.controller.signal.aborted) {
@@ -258,11 +263,11 @@ export class JudilibreDecisions {
 		};
 
 		if (decision.location) dataToInsert.location = decision.location as string;
-		if (decision.summary) {
-			dataToInsert.summary = decision.summary as string;
-		} else if (decision.titlesAndSummaries.length > 0) {
-			dataToInsert.summary = decision.titlesAndSummaries[0].summary;
-		}
+		dataToInsert.themes =
+			decision.themes && decision.themes.length > 0 ? decision.themes : [];
+
+		dataToInsert.visas =
+			decision.visas && decision.visas.length > 0 ? decision.visas : [];
 
 		return { dataToInsert, dataToSearch };
 	}
