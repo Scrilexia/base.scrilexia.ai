@@ -18,10 +18,11 @@ export type JudilibreDecision = {
 	summary: string;
 };
 
-class JudilibreRepository extends BaseRepository {
+export class JudilibreRepository extends BaseRepository {
 	protected override dbName: string;
+	private jurisdiction: string;
 
-	constructor() {
+	constructor(jurisdiction: string) {
 		super();
 		const dbName = getEnvValue("dbJudilibre");
 		if (!dbName) {
@@ -30,13 +31,14 @@ class JudilibreRepository extends BaseRepository {
 			);
 		}
 		this.dbName = dbName;
+		this.jurisdiction = jurisdiction;
 	}
 
-	async initializeDatabase(jurisdiction: string): Promise<void> {
+	async initializeDatabase(): Promise<void> {
 		await this.initializeClient();
 		this.connect();
 
-		if (!(await this.client.tableExists(`jdl_decision_${jurisdiction}`))) {
+		if (!(await this.client.tableExists(`jdl_decision_${this.jurisdiction}`))) {
 			const schema = new Schema();
 			schema.addColumn("id", "VARCHAR(60) PRIMARY KEY NOT NULL");
 			schema.addColumn("jurisdiction", "TEXT NOT NULL");
@@ -49,7 +51,10 @@ class JudilibreRepository extends BaseRepository {
 			schema.addColumn("motivations", "JSON NOT NULL");
 			schema.addColumn("solution", "TEXT NOT NULL");
 			schema.addColumn("summary", "TEXT NOT NULL");
-			await this.client.createTable(`jdl_decision_${jurisdiction}`, schema);
+			await this.client.createTable(
+				`jdl_decision_${this.jurisdiction}`,
+				schema,
+			);
 		}
 	}
 
@@ -59,7 +64,7 @@ class JudilibreRepository extends BaseRepository {
 		this.connect();
 
 		await this.client.query<Result>(
-			`INSERT INTO jl_decision (id, jurisdiction, location, chamber, number, decision_date, type, text, motivations, solution, summary)
+			`INSERT INTO jdl_decision_${this.jurisdiction} (id, jurisdiction, location, chamber, number, decision_date, type, text, motivations, solution, summary)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			[
 				decision.id,
@@ -82,7 +87,7 @@ class JudilibreRepository extends BaseRepository {
 		this.connect();
 
 		const [rows] = await this.client.query<Rows>(
-			"SELECT * FROM jl_decision WHERE id = ?",
+			`SELECT * FROM jdl_decision_${this.jurisdiction} WHERE id = ?`,
 			[id],
 		);
 		if (rows.length === 0) {
@@ -111,7 +116,7 @@ class JudilibreRepository extends BaseRepository {
 		const keywordsJson = JSON.stringify(keywords);
 
 		const [rows] = await this.client.query<Rows>(
-			"SELECT * FROM jl_decision WHERE JSON_OVERLAPS(themes, ?)",
+			`SELECT * FROM jdl_decision_${this.jurisdiction} WHERE JSON_OVERLAPS(themes, ?)`,
 			[keywordsJson],
 		);
 
@@ -135,7 +140,7 @@ class JudilibreRepository extends BaseRepository {
 		this.connect();
 
 		await this.client.query(
-			`UPDATE jl_decision 
+			`UPDATE jdl_decision_${this.jurisdiction} 
              SET jurisdiction = ?, location = ?, chamber = ?, number = ?, decision_date = ?, type = ?, text = ?, motivations = ?, solution = ?, summary = ?
              WHERE id = ?`,
 			[
@@ -158,14 +163,15 @@ class JudilibreRepository extends BaseRepository {
 	async delete(id: string): Promise<void> {
 		this.connect();
 
-		await this.client.query("DELETE FROM jl_decision WHERE id = ?", [id]);
+		await this.client.query(
+			`DELETE FROM jdl_decision_${this.jurisdiction} WHERE id = ?`,
+			[id],
+		);
 	}
 
 	// delete Table
 	async deleteTable(): Promise<void> {
 		this.connect();
-		await this.client.deleteTable("jl_decision");
+		await this.client.deleteTable(`jdl_decision_${this.jurisdiction}`);
 	}
 }
-
-export const judilibreRepository = new JudilibreRepository();

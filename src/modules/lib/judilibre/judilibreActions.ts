@@ -46,6 +46,7 @@ export const judilibreDecisionsImportationReset: RequestHandler = async (
 	judilibreDecisionsImportationAbortController.reset();
 	const legiFrance = new JudilibreDecisionsReset(
 		judilibreDecisionsImportationAbortController,
+		req.body.jurisdiction,
 	);
 	await legiFrance.resetArticles();
 	res.status(200).send("OK");

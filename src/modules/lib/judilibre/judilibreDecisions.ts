@@ -24,7 +24,7 @@ import {
 import type { Collection } from "../../vector/collection";
 import vectorManager from "../../vector/vectorManager";
 import { Vector } from "../../vector/vectorUtils";
-import { judilibreRepository } from "./judilibreRepository";
+import { JudilibreRepository } from "./judilibreRepository";
 import type { JudiDecision, Jurisdiction, Visa } from "./judilibreTypes";
 
 type addEmbedding = (
@@ -41,6 +41,7 @@ export class JudilibreDecisions {
 	private collection: Collection | null = null;
 	private abortController: Abort;
 	private oldestDecisionDate: Date;
+	private judilibreRepository: JudilibreRepository;
 
 	constructor(
 		jurisdiction: Jurisdiction,
@@ -52,6 +53,7 @@ export class JudilibreDecisions {
 
 		this.oldestDecisionDate = endDate;
 		this.abortController = abortController;
+		this.judilibreRepository = new JudilibreRepository(this.#jurisdiction);
 	}
 
 	async addDecisions(): Promise<void> {
@@ -202,7 +204,7 @@ export class JudilibreDecisions {
 							);
 
 							try {
-								await judilibreRepository.create({
+								await this.judilibreRepository.create({
 									id: decision.id,
 									jurisdiction: decision.jurisdiction,
 									location: decision.location ?? decision.jurisdiction,
@@ -216,7 +218,7 @@ export class JudilibreDecisions {
 									summary: decision.summary || "",
 								});
 							} catch (error) {
-								await judilibreRepository.update({
+								await this.judilibreRepository.update({
 									id: decision.id,
 									jurisdiction: decision.jurisdiction,
 									location: decision.location ?? decision.jurisdiction,
@@ -328,7 +330,7 @@ export class JudilibreDecisions {
 	}
 
 	private async prepareDatabases(): Promise<void> {
-		await judilibreRepository.initializeDatabase(this.#jurisdiction);
+		await this.judilibreRepository.initializeDatabase();
 
 		this.hfToken = getEnvValue("hugging_face_token");
 		this.hfModel = getEnvValue("hugging_face_embedding_model");
@@ -492,10 +494,13 @@ export class JudilibreDecisions {
 
 export class JudilibreDecisionsReset {
 	private abortController: Abort;
+	private jurisdiction: string;
 
-	constructor(abortController: Abort) {
+	constructor(abortController: Abort, jurisdiction: string) {
 		this.abortController = abortController;
+		this.jurisdiction = jurisdiction;
 	}
+
 	async resetArticles(): Promise<void> {
 		const collections = await vectorManager.getCollections();
 		for (const collectionName of collections) {
@@ -504,6 +509,7 @@ export class JudilibreDecisionsReset {
 			}
 		}
 
-		await judilibreRepository.deleteTable();
+		const repository = new JudilibreRepository(this.jurisdiction);
+		await repository.deleteTable();
 	}
 }
