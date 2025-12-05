@@ -2,6 +2,7 @@ import { getEnvValue } from "../../../utils/environment";
 import type { Result, Rows } from "../../database/manager";
 import { Schema } from "../../database/schema";
 import { BaseRepository } from "../repositoryManager";
+import type { TextZoneSegment } from "./judilibreTypes";
 
 export type JudilibreDecision = {
 	id: string;
@@ -11,6 +12,8 @@ export type JudilibreDecision = {
 	number: string;
 	decisionDate: string;
 	type: string;
+	text: string;
+	motivations: TextZoneSegment[];
 	solution: string;
 	summary: string;
 };
@@ -42,6 +45,8 @@ class JudilibreRepository extends BaseRepository {
 			schema.addColumn("number", "TEXT NOT NULL");
 			schema.addColumn("decision_date", "DATETIME");
 			schema.addColumn("type", "TEXT NOT NULL");
+			schema.addColumn("text", "LONGTEXT NOT NULL");
+			schema.addColumn("motivations", "JSON NOT NULL");
 			schema.addColumn("solution", "TEXT NOT NULL");
 			schema.addColumn("summary", "TEXT NOT NULL");
 			await this.client.createTable("jl_decision", schema);
@@ -54,8 +59,8 @@ class JudilibreRepository extends BaseRepository {
 		this.connect();
 
 		await this.client.query<Result>(
-			`INSERT INTO jl_decision (id, jurisdiction, location, chamber, number, decision_date, type, solution, summary)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			`INSERT INTO jl_decision (id, jurisdiction, location, chamber, number, decision_date, type, text, motivations, solution, summary)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			[
 				decision.id,
 				decision.jurisdiction,
@@ -64,6 +69,8 @@ class JudilibreRepository extends BaseRepository {
 				decision.number,
 				decision.decisionDate,
 				decision.type,
+				decision.text,
+				JSON.stringify(decision.motivations),
 				decision.solution,
 				decision.summary,
 			],
@@ -90,6 +97,8 @@ class JudilibreRepository extends BaseRepository {
 			number: row.number,
 			decisionDate: row.decision_date,
 			type: row.type,
+			text: row.text,
+			motivations: JSON.parse(row.motivations),
 			solution: row.solution,
 			summary: row.summary,
 		};
@@ -114,6 +123,8 @@ class JudilibreRepository extends BaseRepository {
 			number: row.number,
 			decisionDate: row.decision_date,
 			type: row.type,
+			text: row.text,
+			motivations: JSON.parse(row.motivations),
 			solution: row.solution,
 			summary: row.summary,
 		}));
@@ -125,7 +136,7 @@ class JudilibreRepository extends BaseRepository {
 
 		await this.client.query(
 			`UPDATE jl_decision 
-             SET jurisdiction = ?, location = ?, chamber = ?, number = ?, decision_date = ?, type = ?, solution = ?, summary = ?
+             SET jurisdiction = ?, location = ?, chamber = ?, number = ?, decision_date = ?, type = ?, text = ?, motivations = ?, solution = ?, summary = ?
              WHERE id = ?`,
 			[
 				decision.jurisdiction,
@@ -134,6 +145,8 @@ class JudilibreRepository extends BaseRepository {
 				decision.number,
 				decision.decisionDate,
 				decision.type,
+				decision.text,
+				JSON.stringify(decision.motivations),
 				decision.solution,
 				decision.summary,
 				decision.id,

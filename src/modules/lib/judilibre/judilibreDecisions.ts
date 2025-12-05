@@ -3,11 +3,12 @@ import {
 	InferenceClient,
 } from "@huggingface/inference";
 import type { AxiosResponse } from "axios";
+import e from "express";
 import {
 	CHUNK_SIZE,
 	Codes,
-	DECISIONS_BLOCK_SIZE,
 	DECISIONS_BLOCKS_COUNT,
+	DECISIONS_BLOCK_SIZE,
 } from "../../../types/constants";
 import type { Abort } from "../../../utils/abortController";
 import {
@@ -25,7 +26,6 @@ import vectorManager from "../../vector/vectorManager";
 import { Vector } from "../../vector/vectorUtils";
 import { judilibreRepository } from "./judilibreRepository";
 import type { JudiDecision, Jurisdiction, Visa } from "./judilibreTypes";
-import e from "express";
 
 type addEmbedding = (
 	embedding: number[],
@@ -80,6 +80,8 @@ export class JudilibreDecisions {
 
 		try {
 			let processImportation = true;
+			let decisionCumulCount = 0;
+
 			while (processImportation) {
 				const data = await this.invokeJudilibreExportation<
 					Record<string, unknown>
@@ -118,7 +120,7 @@ export class JudilibreDecisions {
 						currentIndex++;
 
 						console.log(
-							`decision ${currentIndex}/${totalDecisions}: ${decision.id} - ${decision.location ?? decision.jurisdiction}, ${decision.chamber} du ${this.buildDate(decision.decision_date)} n°${decision.number}`,
+							`decision ${decisionCumulCount + currentIndex}/${totalDecisions}: ${decision.id} - ${decision.location ?? decision.jurisdiction}, ${decision.chamber} du ${this.buildDate(decision.decision_date)} n°${decision.number}`,
 						);
 						let summary = "";
 						if (decision.summary && decision.summary.trim() !== "") {
@@ -207,6 +209,8 @@ export class JudilibreDecisions {
 									number: decision.number,
 									decisionDate: decision.decision_date,
 									type: decision.type,
+									text: decision.text,
+									motivations: decision.zones?.motivations ?? [],
 									solution: decision.solution,
 									summary: decision.summary || "",
 								});
@@ -219,6 +223,8 @@ export class JudilibreDecisions {
 									number: decision.number,
 									decisionDate: decision.decision_date,
 									type: decision.type,
+									text: decision.text,
+									motivations: decision.zones?.motivations ?? [],
 									solution: decision.solution,
 									summary: decision.summary || "",
 								});
@@ -242,6 +248,8 @@ export class JudilibreDecisions {
 						break;
 					}
 				}
+
+				decisionCumulCount += 10000;
 			}
 		} catch (error) {
 			console.error(
