@@ -32,11 +32,11 @@ class JudilibreRepository extends BaseRepository {
 		this.dbName = dbName;
 	}
 
-	async initializeDatabase(): Promise<void> {
+	async initializeDatabase(jurisdiction: string): Promise<void> {
 		await this.initializeClient();
 		this.connect();
 
-		if (!(await this.client.tableExists("jl_decision"))) {
+		if (!(await this.client.tableExists(`jdl_decision_${jurisdiction}`))) {
 			const schema = new Schema();
 			schema.addColumn("id", "VARCHAR(60) PRIMARY KEY NOT NULL");
 			schema.addColumn("jurisdiction", "TEXT NOT NULL");
@@ -49,7 +49,7 @@ class JudilibreRepository extends BaseRepository {
 			schema.addColumn("motivations", "JSON NOT NULL");
 			schema.addColumn("solution", "TEXT NOT NULL");
 			schema.addColumn("summary", "TEXT NOT NULL");
-			await this.client.createTable("jl_decision", schema);
+			await this.client.createTable(`jdl_decision_${jurisdiction}`, schema);
 		}
 	}
 

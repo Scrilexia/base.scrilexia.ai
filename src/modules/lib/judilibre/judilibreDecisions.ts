@@ -82,6 +82,7 @@ export class JudilibreDecisions {
 			let processImportation = true;
 			let decisionCumulCount = 0;
 
+			let errorsCount = 0;
 			while (processImportation) {
 				const data = await this.invokeJudilibreExportation<
 					Record<string, unknown>
@@ -235,18 +236,34 @@ export class JudilibreDecisions {
 							console.error(
 								`Error processing decision ${decision.id}: ${error}`,
 							);
-							continue;
+							if (errorsCount < 10) {
+								errorsCount++;
+								continue;
+							}
+
+							console.error(
+								"Too many errors encountered. Aborting importation.",
+							);
+							processImportation = false;
+							this.abortController.controller.abort();
+							break;
 						}
 
 						if (this.abortController.controller.signal.aborted) {
 							console.log("Decisions importation aborted.");
+							processImportation = false;
 							break;
 						}
 					}
 
 					if (this.abortController.controller.signal.aborted) {
+						processImportation = false;
 						break;
 					}
+				}
+
+				if (this.abortController.controller.signal.aborted) {
+					processImportation = false;
 				}
 
 				decisionCumulCount += 10000;
@@ -311,7 +328,7 @@ export class JudilibreDecisions {
 	}
 
 	private async prepareDatabases(): Promise<void> {
-		await judilibreRepository.initializeDatabase();
+		await judilibreRepository.initializeDatabase(this.#jurisdiction);
 
 		this.hfToken = getEnvValue("hugging_face_token");
 		this.hfModel = getEnvValue("hugging_face_embedding_model");
@@ -331,7 +348,7 @@ export class JudilibreDecisions {
 			}
 		}
 
-		const collectionName = `judilibre_embeddings_${vectorManager.size}`;
+		const collectionName = `judilibre_embeddings_${this.#jurisdiction}_${vectorManager.size}`;
 		if (!(await vectorManager.collectionExists(collectionName))) {
 			this.collection = await vectorManager.createCollection(collectionName);
 		} else {
