@@ -28,13 +28,15 @@ services:
   ollama-service:
     image: ollama/ollama:latest
     container_name: ollama_service
-    cpu_period: 100000
-    cpu_quota: 90000
     ports:
       - "11434:11434"
     restart: always
     volumes:
       - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
 
 volumes:
   qdrant_legifrance_judilibre_data:
