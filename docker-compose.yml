@@ -25,7 +25,16 @@ services:
     ports:
       - "4310:4310"
     restart: unless-stopped
+  ollama-service:
+    image: ollama/ollama:latest
+    container_name: ollama_service
+    ports:
+      - "11434:11434"
+    restart: always
+    volumes:
+      - ollama_data:/root/.ollama
 
 volumes:
   qdrant_legifrance_judilibre_data:
   mysql_legifrance_judilibre_data:
+  ollama_data:

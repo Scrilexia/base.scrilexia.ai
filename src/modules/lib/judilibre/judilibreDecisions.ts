@@ -1,29 +1,29 @@
-import {
-	type FeatureExtractionOutput,
-	InferenceClient,
-} from "@huggingface/inference";
 import type { AxiosResponse } from "axios";
-import e from "express";
 import {
 	CHUNK_SIZE,
-	Codes,
 	DECISIONS_BLOCKS_COUNT,
 	DECISIONS_BLOCK_SIZE,
 } from "../../../types/constants";
 import type { Abort } from "../../../utils/abortController";
 import {
 	connect_piste,
+	getEnum,
 	getEnvValue,
 	httpRequest,
+	isEnum,
 	removeEnv,
 	setEnvValue,
 	shortenWithEllipsis,
 	splitTextWithtokens,
 	trySeveralTimes,
 } from "../../../utils/environment";
+import type { EmbeddingInterface } from "../../lib/embedding/embeddingBase";
+import {
+	EmbeddingProviders,
+	createEmbedding,
+} from "../../lib/embedding/provider";
 import type { Collection } from "../../vector/collection";
 import vectorManager from "../../vector/vectorManager";
-import { Vector } from "../../vector/vectorUtils";
 import { JudilibreRepository } from "./judilibreRepository";
 import type { JudiDecision, Jurisdiction, Visa } from "./judilibreTypes";
 
@@ -42,6 +42,7 @@ export class JudilibreDecisions {
 	private abortController: Abort;
 	private oldestDecisionDate: Date;
 	private judilibreRepository: JudilibreRepository;
+	private embeddingInstance: EmbeddingInterface;
 
 	constructor(
 		jurisdiction: Jurisdiction,
@@ -54,6 +55,16 @@ export class JudilibreDecisions {
 		this.oldestDecisionDate = endDate;
 		this.abortController = abortController;
 		this.judilibreRepository = new JudilibreRepository(this.#jurisdiction);
+		const embeddingProviderString = getEnvValue("embedding_provider");
+		let embeddingProvider = EmbeddingProviders.Ollama;
+		if (
+			embeddingProviderString &&
+			isEnum(EmbeddingProviders, embeddingProviderString)
+		) {
+			embeddingProvider = getEnum(EmbeddingProviders, embeddingProviderString);
+		}
+
+		this.embeddingInstance = createEmbedding(embeddingProvider, {});
 	}
 
 	async addDecisions(): Promise<void> {
@@ -120,11 +131,6 @@ export class JudilibreDecisions {
 					}
 
 					for (const decision of decisions) {
-						currentIndex++;
-
-						console.log(
-							`decision ${decisionCumulCount + currentIndex}/${totalDecisions}: ${decision.id} - ${decision.location ?? decision.jurisdiction}, ${decision.chamber} du ${this.buildDate(decision.decision_date)} n°${decision.number}`,
-						);
 						let summary = "";
 						if (decision.summary && decision.summary.trim() !== "") {
 							summary = decision.summary;
@@ -217,6 +223,11 @@ export class JudilibreDecisions {
 									solution: decision.solution,
 									summary: decision.summary || "",
 								});
+								currentIndex++;
+
+								console.log(
+									`decision ${decisionCumulCount + currentIndex}/${totalDecisions}: ${decision.id} - ${decision.location ?? decision.jurisdiction}, ${decision.chamber} du ${this.buildDate(decision.decision_date)} n°${decision.number}`,
+								);
 							} catch (error) {
 								await this.judilibreRepository.update({
 									id: decision.id,
@@ -332,23 +343,7 @@ export class JudilibreDecisions {
 	private async prepareDatabases(): Promise<void> {
 		await this.judilibreRepository.initializeDatabase();
 
-		this.hfToken = getEnvValue("hugging_face_token");
-		this.hfModel = getEnvValue("hugging_face_embedding_model");
-
-		const hf = new InferenceClient(this.hfToken as string);
-		const result = await hf.featureExtraction({
-			model: this.hfModel as string,
-			inputs: "test",
-			provider: "hf-inference",
-		});
-
-		if (Array.isArray(result) && result.length > 0) {
-			if (Array.isArray(result[0])) {
-				vectorManager.size = (result[0] as number[]).length;
-			} else {
-				vectorManager.size = result.length;
-			}
-		}
+		vectorManager.size = await this.embeddingInstance.getDimension();
 
 		const collectionName = `judilibre_embeddings_${this.#jurisdiction}_${vectorManager.size}`;
 		if (!(await vectorManager.collectionExists(collectionName))) {
@@ -461,32 +456,10 @@ export class JudilibreDecisions {
 		}
 
 		for (const chunk of sentences) {
-			const hf = new InferenceClient(this.hfToken as string);
-			const result = await trySeveralTimes<FeatureExtractionOutput>(
-				async () =>
-					await hf.featureExtraction({
-						model: this.hfModel as string,
-						inputs: chunk,
-						provider: "hf-inference",
-					}),
+			const embedding = await trySeveralTimes<number[]>(
+				async () => await this.embeddingInstance.embed(chunk),
 			);
 
-			let embedding: number[] = [];
-			if (Array.isArray(result) && result.length > 0) {
-				if (Array.isArray(result[0])) {
-					const vectors = (result as Array<number[]>).map(
-						(vectorArray) => new Vector(vectorArray),
-					);
-					embedding = Vector.center(vectors).vector;
-				} else {
-					const vector = new Vector(result as number[]);
-					vector.normalize();
-					embedding = vector.vector;
-				}
-			} else {
-				console.warn("No embedding generated chunk skipped.");
-				continue;
-			}
 			await addEmbedding(embedding, zone, shortenWithEllipsis(chunk));
 		}
 	}
