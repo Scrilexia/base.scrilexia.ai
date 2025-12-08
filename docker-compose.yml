@@ -29,7 +29,7 @@ services:
     image: ollama/ollama:latest
     container_name: ollama_service
     cpu_period: 100000
-    cpu_quota: 60000
+    cpu_quota: 90000
     ports:
       - "11434:11434"
     restart: always
