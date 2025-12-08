@@ -1,13 +1,15 @@
-import { InferenceClient } from "@huggingface/inference";
 import {
 	connectLegiFrance,
+	getEnum,
 	getEnvValue,
 	getLegiFranceAuthorization,
 	httpRequest,
+	isEnum,
 	legiFrancePostRequest,
 	removeEnv,
 	splitTextWithtokens,
 	toDate,
+	trySeveralTimes,
 } from "../../../utils/environment";
 import type { Collection } from "../../vector/collection";
 import vectorManager from "../../vector/vectorManager";
@@ -21,19 +23,31 @@ import {
 	type LegiFranceCodeSectionOnline,
 } from "./legiFranceTypes";
 
-import { TokenTextSplitter } from "langchain/text_splitter";
 import { CHUNK_SIZE } from "../../../types/constants";
 import type { Abort } from "../../../utils/abortController";
 import { Vector } from "../../vector/vectorUtils";
+import type { EmbeddingInterface } from "../embedding/embeddingBase";
+import { createEmbedding, EmbeddingProviders } from "../embedding/provider";
 
 export class LegiFranceBase {
 	protected hfToken: string | null = null;
 	protected hfModel: string | null = null;
 	protected collection: Collection | null = null;
 	protected abortController: Abort;
+	protected embeddingInstance: EmbeddingInterface;
 
 	constructor(abortController: Abort) {
 		this.abortController = abortController;
+		const embeddingProviderString = getEnvValue("embedding_provider");
+		let embeddingProvider = EmbeddingProviders.Ollama;
+		if (
+			embeddingProviderString &&
+			isEnum(EmbeddingProviders, embeddingProviderString)
+		) {
+			embeddingProvider = getEnum(EmbeddingProviders, embeddingProviderString);
+		}
+
+		this.embeddingInstance = createEmbedding(embeddingProvider, {});
 	}
 
 	protected async prepareDatabases(): Promise<void> {
@@ -41,23 +55,7 @@ export class LegiFranceBase {
 		await legiFranceArticleRepository.initializeDatabase();
 
 		await connectLegiFrance();
-		this.hfToken = getEnvValue("hugging_face_token");
-		this.hfModel = getEnvValue("hugging_face_embedding_model");
-
-		const hf = new InferenceClient(this.hfToken as string);
-		const result = await hf.featureExtraction({
-			model: this.hfModel as string,
-			inputs: "test",
-			provider: "hf-inference",
-		});
-
-		if (Array.isArray(result) && result.length > 0) {
-			if (Array.isArray(result[0])) {
-				vectorManager.size = (result[0] as number[]).length;
-			} else {
-				vectorManager.size = result.length;
-			}
-		}
+		vectorManager.size = await this.embeddingInstance.getDimension();
 
 		const collectionName = `legifrance_embeddings_${vectorManager.size}`;
 		if (!(await vectorManager.collectionExists(collectionName))) {
@@ -203,33 +201,10 @@ export class LegiFranceBase {
 
 		const chunks = await splitTextWithtokens(articleDetails.texte, CHUNK_SIZE);
 
-		const hf = new InferenceClient(this.hfToken as string);
-
 		for (const chunk of chunks) {
-			const result = await hf.featureExtraction({
-				model: this.hfModel as string,
-				inputs: chunk,
-				provider: "hf-inference",
-			});
-
-			let embedding: number[] = [];
-			if (Array.isArray(result) && result.length > 0) {
-				if (Array.isArray(result[0])) {
-					const vectors = (result as Array<number[]>).map(
-						(vectorArray) => new Vector(vectorArray),
-					);
-					embedding = Vector.center(vectors).vector;
-				} else {
-					const vector = new Vector(result as number[]);
-					vector.normalize();
-					embedding = vector.vector;
-				}
-			} else {
-				console.warn(
-					`No embedding generated for article ${articleDetails.id}, chunk skipped.`,
-				);
-				continue;
-			}
+			const embedding = await trySeveralTimes<number[]>(
+				async () => await this.embeddingInstance.embed(chunk),
+			);
 
 			const length = (await this.collection?.getCount()) ?? 0;
 			let index = length + 1;
