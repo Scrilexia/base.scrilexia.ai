@@ -16,14 +16,6 @@ export const legiFranceAddArticles: RequestHandler = async (req, res, next) => {
 	res.status(200).send("OK");
 };
 
-export const legiFranceAddArticlesStatus: RequestHandler = async (
-	req,
-	res,
-	next,
-) => {
-	res.status(200).send("OK");
-};
-
 export const legiFranceAddArticlesAbort: RequestHandler = async (
 	req,
 	res,
@@ -64,13 +56,5 @@ export const legiFranceAddArticlesAndLawsAbort: RequestHandler = async (
 	next,
 ) => {
 	legiFranceAddArticlesAndLawsAbortController.controller.abort();
-	res.status(200).send("OK");
-};
-
-export const legiFranceAddArticlesAndLawsStatus: RequestHandler = async (
-	req,
-	res,
-	next,
-) => {
 	res.status(200).send("OK");
 };

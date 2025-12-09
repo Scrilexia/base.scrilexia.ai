@@ -13,9 +13,10 @@ export const judilibreDecisionsImportation: RequestHandler = async (
 ) => {
 	judilibreDecisionsImportationAbortController.reset();
 	const judilibreDecisions = new JudilibreDecisions(
-		req.body.jurisdiction,
-		new Date(req.body.end_date),
+		req.body.jurisdiction ?? "cc",
+		new Date(Date.now()),
 		judilibreDecisionsImportationAbortController,
+		req.body.max_decisions_to_import || -1,
 	);
 
 	judilibreDecisions.addDecisions();
@@ -29,7 +30,7 @@ export const judilibreDecisionsCache: RequestHandler = async (
 ) => {
 	const judilibreDecisions = new JudilibreDecisions(
 		req.body.jurisdiction,
-		new Date(),
+		new Date(req.body.end_date ?? Date.now()),
 		judilibreDecisionsImportationAbortController,
 	);
 
@@ -48,14 +49,6 @@ export const judilibreDecisionsCacheReset: RequestHandler = async (
 	);
 	await judilibre.resetCache();
 	res.status(200).send("Cache reset completed");
-};
-
-export const judilibreDecisionsImportationStatus: RequestHandler = async (
-	req,
-	res,
-	next,
-) => {
-	res.status(200).send("OK");
 };
 
 export const judilibreDecisionsImportationAbort: RequestHandler = async (

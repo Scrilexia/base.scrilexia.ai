@@ -39,22 +39,23 @@ type addEmbedding = (
 export class JudilibreDecisions {
 	#jurisdiction: Jurisdiction;
 	#endDate: Date;
-	private hfToken: string | null = null;
-	private hfModel: string | null = null;
 	private collection: Collection | null = null;
 	private abortController: Abort;
 	private oldestDecisionDate: Date;
 	private judilibreRepository: JudilibreRepository;
 	private judilibreCacheRepository: JudilibreCacheRepository;
 	private embeddingInstance: EmbeddingInterface;
+	private maxDecisionsToImport = -1;
 
 	constructor(
 		jurisdiction: Jurisdiction,
 		endDate: Date,
 		abortController: Abort,
+		maxDecisionsToImport = -1,
 	) {
 		this.#jurisdiction = jurisdiction;
 		this.#endDate = endDate;
+		this.maxDecisionsToImport = maxDecisionsToImport;
 
 		this.oldestDecisionDate = endDate;
 		this.abortController = abortController;
@@ -108,7 +109,7 @@ export class JudilibreDecisions {
 					currentIndex++;
 
 					console.log(
-						`decision id ${decisionCumulCount + currentIndex}: ${decision.id} - ${decision.location ?? decision.jurisdiction}, ${decision.chamber} du ${this.buildDate(decision.decision_date)} n°${decision.number}`,
+						`decision id ${decisionCumulCount + currentIndex}: ${decision.id} - ${decision.location ?? decision.jurisdiction}${decision.chamber ? `, ${decision.chamber}` : ""} du ${this.buildDate(decision.decision_date)} n°${decision.number}`,
 					);
 
 					const decisionFound = await this.judilibreCacheRepository.read(
@@ -148,7 +149,7 @@ export class JudilibreDecisions {
 	}
 
 	async addDecisions(): Promise<void> {
-		this.prepareDatabases();
+		await this.prepareDatabases();
 
 		const totalDecisions = (await this.judilibreCacheRepository.count()) ?? 0;
 
@@ -158,6 +159,17 @@ export class JudilibreDecisions {
 
 		try {
 			while (processImportation) {
+				if (
+					this.maxDecisionsToImport > 0 &&
+					decisionCumulCount >= this.maxDecisionsToImport
+				) {
+					console.log(
+						`Maximum number of decisions to import reached: ${this.maxDecisionsToImport}`,
+					);
+					processImportation = false;
+					continue;
+				}
+
 				const decitionsInDatabase = await this.judilibreCacheRepository.readAll(
 					decisionCumulCount,
 					10000,
@@ -257,13 +269,17 @@ export class JudilibreDecisions {
 							},
 						);
 
-						try {
+						const decisionFound = await this.judilibreRepository.read(
+							decision.id,
+						);
+
+						if (!decisionFound) {
 							await this.judilibreRepository.create({
 								id: decision.id,
 								jurisdiction: decision.jurisdiction,
 								location: decision.location ?? decision.jurisdiction,
-								chamber: decision.chamber,
-								number: decision.number,
+								chamber: decision.chamber ?? "",
+								number: decision.number ?? "unknown",
 								decisionDate: decision.decision_date,
 								type: decision.type,
 								text: decision.text,
@@ -274,22 +290,8 @@ export class JudilibreDecisions {
 							currentIndex++;
 
 							console.log(
-								`decision ${decisionCumulCount + currentIndex}/${totalDecisions}: ${decision.id} - ${decision.location ?? decision.jurisdiction}, ${decision.chamber} du ${this.buildDate(decision.decision_date)} n°${decision.number}`,
+								`decision ${decisionCumulCount + currentIndex}/${totalDecisions}: ${decision.id} - ${decision.location ?? decision.jurisdiction}${decision.chamber ? `, ${decision.chamber}` : ""} du ${this.buildDate(decision.decision_date)} n°${decision.number}`,
 							);
-						} catch (error) {
-							await this.judilibreRepository.update({
-								id: decision.id,
-								jurisdiction: decision.jurisdiction,
-								location: decision.location ?? decision.jurisdiction,
-								chamber: decision.chamber,
-								number: decision.number,
-								decisionDate: decision.decision_date,
-								type: decision.type,
-								text: decision.text,
-								motivations: decision.zones?.motivations ?? [],
-								solution: decision.solution,
-								summary: decision.summary || "",
-							});
 						}
 					} catch (error) {
 						console.error(`Error processing decision ${decision.id}: ${error}`);
@@ -332,15 +334,15 @@ export class JudilibreDecisions {
 			id: decision.id,
 			date: decision.decision_date,
 			jurisdiction: decision.jurisdiction,
-			chamber: decision.chamber,
-			number: decision.number,
+			chamber: decision.chamber || "",
+			number: decision.number || "unknown",
 		};
 		const dataToSearch = {
 			id: decision.id,
 			date: decision.decision_date,
 			jurisdiction: decision.jurisdiction,
-			chamber: decision.chamber,
-			number: decision.number,
+			chamber: decision.chamber || "",
+			number: decision.number || "unknown",
 		};
 
 		if (decision.location) dataToInsert.location = decision.location as string;
