@@ -84,6 +84,7 @@ export class JudilibreDecisions {
 		let decisionCumulCount = 0;
 		while (processImportation) {
 			let currentIndex = 0;
+			let lastDate = this.oldestDecisionDate;
 			for (blockIndex = 0; blockIndex < blocksCount; blockIndex++) {
 				const data = await this.invokeJudilibreExportation<
 					Record<string, unknown>
@@ -103,7 +104,7 @@ export class JudilibreDecisions {
 				}
 
 				for (const decision of decisions) {
-					this.oldestDecisionDate = new Date(decision.decision_date);
+					lastDate = new Date(decision.decision_date);
 					currentIndex++;
 
 					console.log(
@@ -127,7 +128,7 @@ export class JudilibreDecisions {
 					}
 
 					if (this.abortController.controller.signal.aborted) {
-						console.log("Decisions importation into cache aborted.");
+						console.log("Decisions IDs cache building aborted.");
 						processImportation = false;
 						break;
 					}
@@ -139,8 +140,11 @@ export class JudilibreDecisions {
 				}
 			}
 
+			this.oldestDecisionDate = lastDate;
 			decisionCumulCount += 10000;
 		}
+
+		console.log("Decision IDs cache building terminated.");
 	}
 
 	async addDecisions(): Promise<void> {
@@ -301,6 +305,8 @@ export class JudilibreDecisions {
 				`Error during decisions importation at ${currentIndex}: ${error}`,
 			);
 		}
+
+		console.log("Decision importation terminated.");
 	}
 
 	parseArticles(visa: Visa[]): string[] {
