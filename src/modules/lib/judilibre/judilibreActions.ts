@@ -2,6 +2,7 @@ import type { RequestHandler } from "express";
 import { judilibreDecisionsImportationAbortController } from "../../../router";
 import {
 	JudilibreDecisions,
+	JudilibreDecisionsCacheReset,
 	JudilibreDecisionsReset,
 } from "./judilibreDecisions";
 
@@ -19,6 +20,34 @@ export const judilibreDecisionsImportation: RequestHandler = async (
 
 	judilibreDecisions.addDecisions();
 	res.status(200).send("Importation started");
+};
+
+export const judilibreDecisionsCache: RequestHandler = async (
+	req,
+	res,
+	next,
+) => {
+	const judilibreDecisions = new JudilibreDecisions(
+		req.body.jurisdiction,
+		new Date(),
+		judilibreDecisionsImportationAbortController,
+	);
+
+	judilibreDecisions.buildDecisionIdsList();
+	res.status(200).send("Cache building started");
+};
+
+export const judilibreDecisionsCacheReset: RequestHandler = async (
+	req,
+	res,
+	next,
+) => {
+	const judilibre = new JudilibreDecisionsCacheReset(
+		req.body.jurisdiction,
+		judilibreDecisionsImportationAbortController,
+	);
+	await judilibre.resetCache();
+	res.status(200).send("Cache reset completed");
 };
 
 export const judilibreDecisionsImportationStatus: RequestHandler = async (
@@ -48,6 +77,6 @@ export const judilibreDecisionsImportationReset: RequestHandler = async (
 		judilibreDecisionsImportationAbortController,
 		req.body.jurisdiction,
 	);
-	await legiFrance.resetArticles();
+	await legiFrance.resetDecisions();
 	res.status(200).send("OK");
 };

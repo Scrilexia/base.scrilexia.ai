@@ -18,6 +18,11 @@ export type JudilibreDecision = {
 	summary: string;
 };
 
+export type JudilibreDecisionCache = {
+	id: string;
+	decisionDate: string;
+};
+
 export class JudilibreRepository extends BaseRepository {
 	protected override dbName: string;
 	private jurisdiction: string;
@@ -173,5 +178,127 @@ export class JudilibreRepository extends BaseRepository {
 	async deleteTable(): Promise<void> {
 		this.connect();
 		await this.client.deleteTable(`jdl_decision_${this.jurisdiction}`);
+	}
+}
+
+export class JudilibreCacheRepository extends BaseRepository {
+	protected override dbName: string;
+	private jurisdiction: string;
+
+	constructor(jurisdiction: string) {
+		super();
+		const dbName = getEnvValue("dbJudilibre");
+		if (!dbName) {
+			throw new Error(
+				"LegiFrance database name is not defined in environment variables.",
+			);
+		}
+		this.dbName = dbName;
+		this.jurisdiction = jurisdiction;
+	}
+
+	async initializeDatabase(): Promise<void> {
+		await this.initializeClient();
+		this.connect();
+
+		if (
+			!(await this.client.tableExists(
+				`jdl_decision_cache_${this.jurisdiction}`,
+			))
+		) {
+			const schema = new Schema();
+			schema.addColumn("id", "VARCHAR(60) PRIMARY KEY NOT NULL");
+			schema.addColumn("decision_date", "DATETIME");
+			await this.client.createTable(
+				`jdl_decision_cache_${this.jurisdiction}`,
+				schema,
+			);
+		}
+	}
+
+	// CRUD methods for code would go here
+	// create
+	async create(cache: JudilibreDecisionCache): Promise<void> {
+		this.connect();
+
+		await this.client.query<Result>(
+			`INSERT INTO jdl_decision_cache_${this.jurisdiction} (id, decision_date)
+			 VALUES (?, ?)`,
+			[cache.id, cache.decisionDate],
+		);
+	}
+
+	// read
+	async read(id: string): Promise<JudilibreDecisionCache | null> {
+		this.connect();
+
+		const [rows] = await this.client.query<Rows>(
+			`SELECT * FROM jdl_decision_cache_${this.jurisdiction} WHERE id = ?`,
+			[id],
+		);
+		if (rows.length === 0) {
+			return null;
+		}
+		const row = rows[0];
+		return {
+			id: row.id,
+			decisionDate: row.decision_date,
+		};
+	}
+
+	// read all
+	async readAll(
+		offset: number,
+		size: number,
+	): Promise<JudilibreDecisionCache[]> {
+		this.connect();
+
+		const [rows] = await this.client.query<Rows>(
+			`SELECT * FROM jdl_decision_cache_${this.jurisdiction} LIMIT ? OFFSET ?`,
+			[size, offset],
+		);
+
+		return rows.map((row) => ({
+			id: row.id,
+			decisionDate: row.decision_date,
+		}));
+	}
+
+	// count
+	async count(): Promise<number> {
+		this.connect();
+
+		const [rows] = await this.client.query<Rows>(
+			`SELECT COUNT(*) as count FROM jdl_decision_cache_${this.jurisdiction}`,
+		);
+
+		return rows[0].count;
+	}
+
+	//update
+	async update(cache: JudilibreDecisionCache): Promise<void> {
+		this.connect();
+
+		await this.client.query(
+			`UPDATE jdl_decision_cache_${this.jurisdiction} 
+			 SET decision_date = ?	
+			 WHERE id = ?`,
+			[cache.decisionDate, cache.id],
+		);
+	}
+
+	// delete
+	async delete(id: string): Promise<void> {
+		this.connect();
+		await this.client.query(
+			`DELETE FROM jdl_decision_cache_${this.jurisdiction} WHERE id = ?`,
+			[id],
+		);
+	}
+
+	// delete Table
+	async deleteTable(): Promise<void> {
+		this.connect();
+		await this.client.deleteTable(`jdl_decision_cache_${this.jurisdiction}`);
 	}
 }

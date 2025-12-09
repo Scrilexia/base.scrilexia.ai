@@ -27,7 +27,7 @@ import { CHUNK_SIZE } from "../../../types/constants";
 import type { Abort } from "../../../utils/abortController";
 import { Vector } from "../../vector/vectorUtils";
 import type { EmbeddingInterface } from "../embedding/embeddingBase";
-import { createEmbedding, EmbeddingProviders } from "../embedding/provider";
+import { EmbeddingProviders, createEmbedding } from "../embedding/provider";
 
 export class LegiFranceBase {
 	protected hfToken: string | null = null;

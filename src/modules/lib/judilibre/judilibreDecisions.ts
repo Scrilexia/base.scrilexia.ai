@@ -24,7 +24,10 @@ import {
 } from "../../lib/embedding/provider";
 import type { Collection } from "../../vector/collection";
 import vectorManager from "../../vector/vectorManager";
-import { JudilibreRepository } from "./judilibreRepository";
+import {
+	JudilibreCacheRepository,
+	JudilibreRepository,
+} from "./judilibreRepository";
 import type { JudiDecision, Jurisdiction, Visa } from "./judilibreTypes";
 
 type addEmbedding = (
@@ -42,6 +45,7 @@ export class JudilibreDecisions {
 	private abortController: Abort;
 	private oldestDecisionDate: Date;
 	private judilibreRepository: JudilibreRepository;
+	private judilibreCacheRepository: JudilibreCacheRepository;
 	private embeddingInstance: EmbeddingInterface;
 
 	constructor(
@@ -55,6 +59,9 @@ export class JudilibreDecisions {
 		this.oldestDecisionDate = endDate;
 		this.abortController = abortController;
 		this.judilibreRepository = new JudilibreRepository(this.#jurisdiction);
+		this.judilibreCacheRepository = new JudilibreCacheRepository(
+			this.#jurisdiction,
+		);
 		const embeddingProviderString = getEnvValue("embedding_provider");
 		let embeddingProvider = EmbeddingProviders.Ollama;
 		if (
@@ -67,127 +74,140 @@ export class JudilibreDecisions {
 		this.embeddingInstance = createEmbedding(embeddingProvider, {});
 	}
 
-	async addDecisions(): Promise<void> {
+	async buildDecisionIdsList(): Promise<void> {
 		let blockIndex = 0;
 		const blockSize = DECISIONS_BLOCK_SIZE;
 		const blocksCount = DECISIONS_BLOCKS_COUNT;
 		this.oldestDecisionDate = this.#endDate;
-		this.prepareDatabases();
-		const data = await this.invokeJudilibreExportation<Record<string, unknown>>(
-			this.#jurisdiction,
-			0,
-			1,
-			this.oldestDecisionDate,
-		);
-
-		if (!data || !("total" in data)) {
-			throw new Error("Invalid response from Judilibre API");
-		}
-
-		const totalDecisions = data.total as number;
-		if (totalDecisions === 0) {
-			throw new Error(
-				`No decisions to add for jurisdiction:${this.#jurisdiction}`,
-			);
-		}
-
-		try {
-			let processImportation = true;
-			let decisionCumulCount = 0;
-
-			let errorsCount = 0;
-			while (processImportation) {
+		await this.prepareCacheDatabase();
+		let processImportation = true;
+		let decisionCumulCount = 0;
+		while (processImportation) {
+			let currentIndex = 0;
+			for (blockIndex = 0; blockIndex < blocksCount; blockIndex++) {
 				const data = await this.invokeJudilibreExportation<
 					Record<string, unknown>
-				>(this.#jurisdiction, 0, 1, this.oldestDecisionDate);
+				>(this.#jurisdiction, blockIndex, blockSize, this.oldestDecisionDate);
 
-				if (!data || !("total" in data)) {
-					throw new Error("Invalid response from Judilibre API");
+				if (!data || !("results" in data)) {
+					console.error(
+						"Invalid data format received for block index:",
+						blockIndex,
+					);
+					continue;
 				}
-
-				const total = data.total as number;
-				if (total === 0) {
+				const decisions = data.results as JudiDecision[];
+				if (!decisions || decisions.length === 0) {
 					processImportation = false;
 					break;
 				}
 
-				let currentIndex = 0;
-				for (blockIndex = 0; blockIndex < blocksCount; blockIndex++) {
-					const data = await this.invokeJudilibreExportation<
-						Record<string, unknown>
-					>(this.#jurisdiction, blockIndex, blockSize, this.oldestDecisionDate);
+				for (const decision of decisions) {
+					this.oldestDecisionDate = new Date(decision.decision_date);
+					currentIndex++;
 
-					if (!data || !("results" in data)) {
-						console.error(
-							"Invalid data format received for block index:",
-							blockIndex,
-						);
-						continue;
+					console.log(
+						`decision id ${decisionCumulCount + currentIndex}: ${decision.id} - ${decision.location ?? decision.jurisdiction}, ${decision.chamber} du ${this.buildDate(decision.decision_date)} n°${decision.number}`,
+					);
+
+					const decisionFound = await this.judilibreCacheRepository.read(
+						decision.id,
+					);
+					if (!decisionFound) {
+						try {
+							await this.judilibreCacheRepository.create({
+								id: decision.id,
+								decisionDate: decision.decision_date,
+							});
+						} catch (error) {
+							console.error(
+								`Error processing decision id ${decision.id}: ${error}`,
+							);
+						}
 					}
-					const decisions = data.results as JudiDecision[];
-					if (!decisions || decisions.length === 0) {
+
+					if (this.abortController.controller.signal.aborted) {
+						console.log("Decisions importation into cache aborted.");
 						processImportation = false;
 						break;
 					}
+				}
 
-					for (const decision of decisions) {
-						let summary = "";
+				if (this.abortController.controller.signal.aborted) {
+					processImportation = false;
+					break;
+				}
+			}
+
+			decisionCumulCount += 10000;
+		}
+	}
+
+	async addDecisions(): Promise<void> {
+		this.prepareDatabases();
+
+		const totalDecisions = (await this.judilibreCacheRepository.count()) ?? 0;
+
+		let currentIndex = 0;
+		let processImportation = true;
+		let decisionCumulCount = 0;
+
+		try {
+			while (processImportation) {
+				const decitionsInDatabase = await this.judilibreCacheRepository.readAll(
+					decisionCumulCount,
+					10000,
+				);
+				if (decitionsInDatabase.length === 0) {
+					console.log("All decisions have been imported.");
+					processImportation = false;
+					continue;
+				}
+
+				if (this.abortController.controller.signal.aborted) {
+					console.log("Decisions importation aborted.");
+					processImportation = false;
+					continue;
+				}
+
+				for (const decitionInDatabase of decitionsInDatabase) {
+					const decision = await this.invokeJudilibreDecision<JudiDecision>(
+						decitionInDatabase.id,
+						true,
+					);
+					if (!decision) {
+						console.error(`Decision not found: ${decitionInDatabase.id}`);
+						continue;
+					}
+					let summary = "";
+					if (decision.summary && decision.summary.trim() !== "") {
+						summary = decision.summary;
+					} else if (
+						decision.titlesAndSummaries &&
+						decision.titlesAndSummaries.length > 0
+					) {
+						summary = decision.titlesAndSummaries[0].summary;
+					}
+
+					decision.summary = summary;
+
+					if (decision.visa && decision.visa.length > 0) {
+						decision.visas = this.parseArticles(decision.visa);
+					} else {
+						decision.visas = [];
+					}
+					if (!decision.themes || decision.themes.length === 0) {
+						decision.themes = [];
+					}
+
+					const { dataToInsert, dataToSearch } =
+						this.buildDataToInsert(decision);
+
+					try {
 						if (decision.summary && decision.summary.trim() !== "") {
-							summary = decision.summary;
-						} else if (
-							decision.titlesAndSummaries &&
-							decision.titlesAndSummaries.length > 0
-						) {
-							summary = decision.titlesAndSummaries[0].summary;
-						}
-
-						decision.summary = summary;
-
-						if (decision.visa && decision.visa.length > 0) {
-							decision.visas = this.parseArticles(decision.visa);
-						} else {
-							decision.visas = [];
-						}
-						if (!decision.themes || decision.themes.length === 0) {
-							decision.themes = [];
-						}
-
-						const { dataToInsert, dataToSearch } =
-							this.buildDataToInsert(decision);
-
-						try {
-							if (decision.summary && decision.summary.trim() !== "") {
-								await this.addEmbeddingsbySentences(
-									decision.summary,
-									"summary",
-									async (
-										embedding: number[],
-										zone: string,
-										sentence: string,
-									) => {
-										dataToInsert.zone = zone;
-										dataToInsert.sentence = sentence;
-										dataToSearch.sentence = sentence;
-
-										const length = (await this.collection?.getCount()) ?? 0;
-										let index = length + 1;
-										const searchResult =
-											await this.collection?.search(dataToSearch);
-
-										if (searchResult && searchResult.points.length > 0) {
-											index = searchResult.points[0].id as number;
-										}
-										await this.collection?.addEmbedding(
-											embedding,
-											index,
-											dataToInsert,
-										);
-									},
-								);
-							}
-
-							await this.buildEmbeddingsFromTextZoneSegments(
-								decision,
+							await this.addEmbeddingsbySentences(
+								decision.summary,
+								"summary",
 								async (embedding: number[], zone: string, sentence: string) => {
 									dataToInsert.zone = zone;
 									dataToInsert.sentence = sentence;
@@ -208,82 +228,77 @@ export class JudilibreDecisions {
 									);
 								},
 							);
+						}
 
-							try {
-								await this.judilibreRepository.create({
-									id: decision.id,
-									jurisdiction: decision.jurisdiction,
-									location: decision.location ?? decision.jurisdiction,
-									chamber: decision.chamber,
-									number: decision.number,
-									decisionDate: decision.decision_date,
-									type: decision.type,
-									text: decision.text,
-									motivations: decision.zones?.motivations ?? [],
-									solution: decision.solution,
-									summary: decision.summary || "",
-								});
-								currentIndex++;
+						await this.buildEmbeddingsFromTextZoneSegments(
+							decision,
+							async (embedding: number[], zone: string, sentence: string) => {
+								dataToInsert.zone = zone;
+								dataToInsert.sentence = sentence;
+								dataToSearch.sentence = sentence;
 
-								console.log(
-									`decision ${decisionCumulCount + currentIndex}/${totalDecisions}: ${decision.id} - ${decision.location ?? decision.jurisdiction}, ${decision.chamber} du ${this.buildDate(decision.decision_date)} n°${decision.number}`,
+								const length = (await this.collection?.getCount()) ?? 0;
+								let index = length + 1;
+								const searchResult =
+									await this.collection?.search(dataToSearch);
+
+								if (searchResult && searchResult.points.length > 0) {
+									index = searchResult.points[0].id as number;
+								}
+								await this.collection?.addEmbedding(
+									embedding,
+									index,
+									dataToInsert,
 								);
-							} catch (error) {
-								await this.judilibreRepository.update({
-									id: decision.id,
-									jurisdiction: decision.jurisdiction,
-									location: decision.location ?? decision.jurisdiction,
-									chamber: decision.chamber,
-									number: decision.number,
-									decisionDate: decision.decision_date,
-									type: decision.type,
-									text: decision.text,
-									motivations: decision.zones?.motivations ?? [],
-									solution: decision.solution,
-									summary: decision.summary || "",
-								});
-							}
+							},
+						);
 
-							this.oldestDecisionDate = new Date(decision.decision_date);
+						try {
+							await this.judilibreRepository.create({
+								id: decision.id,
+								jurisdiction: decision.jurisdiction,
+								location: decision.location ?? decision.jurisdiction,
+								chamber: decision.chamber,
+								number: decision.number,
+								decisionDate: decision.decision_date,
+								type: decision.type,
+								text: decision.text,
+								motivations: decision.zones?.motivations ?? [],
+								solution: decision.solution,
+								summary: decision.summary || "",
+							});
+							currentIndex++;
+
+							console.log(
+								`decision ${decisionCumulCount + currentIndex}/${totalDecisions}: ${decision.id} - ${decision.location ?? decision.jurisdiction}, ${decision.chamber} du ${this.buildDate(decision.decision_date)} n°${decision.number}`,
+							);
 						} catch (error) {
-							console.error(
-								`Error processing decision ${decision.id}: ${error}`,
-							);
-							if (errorsCount < 10) {
-								errorsCount++;
-								continue;
-							}
-
-							console.error(
-								"Too many errors encountered. Aborting importation.",
-							);
-							processImportation = false;
-							this.abortController.controller.abort();
-							break;
+							await this.judilibreRepository.update({
+								id: decision.id,
+								jurisdiction: decision.jurisdiction,
+								location: decision.location ?? decision.jurisdiction,
+								chamber: decision.chamber,
+								number: decision.number,
+								decisionDate: decision.decision_date,
+								type: decision.type,
+								text: decision.text,
+								motivations: decision.zones?.motivations ?? [],
+								solution: decision.solution,
+								summary: decision.summary || "",
+							});
 						}
-
-						if (this.abortController.controller.signal.aborted) {
-							console.log("Decisions importation aborted.");
-							processImportation = false;
-							break;
-						}
-					}
-
-					if (this.abortController.controller.signal.aborted) {
+					} catch (error) {
+						console.error(`Error processing decision ${decision.id}: ${error}`);
 						processImportation = false;
+						this.abortController.controller.abort();
 						break;
 					}
 				}
-
-				if (this.abortController.controller.signal.aborted) {
-					processImportation = false;
-				}
-
-				decisionCumulCount += 10000;
+				decisionCumulCount += decitionsInDatabase.length;
 			}
 		} catch (error) {
 			console.error(
-				`Error during decisions importation at ${blockIndex}: ${error}`,
+				`Error during decisions importation at ${currentIndex}: ${error}`,
 			);
 		}
 	}
@@ -353,6 +368,9 @@ export class JudilibreDecisions {
 		}
 	}
 
+	private async prepareCacheDatabase(): Promise<void> {
+		await this.judilibreCacheRepository.initializeDatabase();
+	}
 	async retrieveJudilibreData<T>(judilibreUrl: string): Promise<T | undefined> {
 		let response: Response | AxiosResponse<T>;
 		response = await httpRequest<T>(judilibreUrl, {
@@ -474,7 +492,7 @@ export class JudilibreDecisionsReset {
 		this.jurisdiction = jurisdiction;
 	}
 
-	async resetArticles(): Promise<void> {
+	async resetDecisions(): Promise<void> {
 		const collections = await vectorManager.getCollections();
 		for (const collectionName of collections) {
 			if (collectionName.startsWith("judilibre_embeddings_")) {
@@ -483,6 +501,21 @@ export class JudilibreDecisionsReset {
 		}
 
 		const repository = new JudilibreRepository(this.jurisdiction);
+		await repository.deleteTable();
+	}
+}
+
+export class JudilibreDecisionsCacheReset {
+	private abortController: Abort;
+	private jurisdiction: string;
+
+	constructor(jurisdiction: string, abortController: Abort) {
+		this.abortController = abortController;
+		this.jurisdiction = jurisdiction;
+	}
+
+	async resetCache(): Promise<void> {
+		const repository = new JudilibreCacheRepository(this.jurisdiction);
 		await repository.deleteTable();
 	}
 }

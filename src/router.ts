@@ -10,6 +10,8 @@ import {
 } from "./modules/lib/legiFrance/legiFranceActions";
 
 import {
+	judilibreDecisionsCache,
+	judilibreDecisionsCacheReset,
 	judilibreDecisionsImportation,
 	judilibreDecisionsImportationAbort,
 	judilibreDecisionsImportationReset,
@@ -29,6 +31,8 @@ router.post("/api/articles/abort", legiFranceAddArticlesAbort);
 router.post("/api/articles/reset", legiFranceResetArticles);
 
 router.post("/api/decisions", judilibreDecisionsImportation);
+router.post("/api/decisions/cache", judilibreDecisionsCache);
+router.post("/api/decisions/cache/reset", judilibreDecisionsCacheReset);
 router.post("/api/decisions/status", judilibreDecisionsImportationStatus);
 router.post("/api/decisions/abort", judilibreDecisionsImportationAbort);
 router.post("/api/decisions/reset", judilibreDecisionsImportationReset);
