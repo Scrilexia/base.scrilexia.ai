@@ -16,6 +16,8 @@ export type JudilibreDecision = {
 	motivations: TextZoneSegment[];
 	solution: string;
 	summary: string;
+	themes: string[];
+	visas: string[];
 };
 
 export type JudilibreDecisionCache = {
@@ -56,6 +58,8 @@ export class JudilibreRepository extends BaseRepository {
 			schema.addColumn("motivations", "JSON NOT NULL");
 			schema.addColumn("solution", "TEXT NOT NULL");
 			schema.addColumn("summary", "TEXT NOT NULL");
+			schema.addColumn("themes", "JSON NOT NULL");
+			schema.addColumn("visas", "JSON NOT NULL");
 			await this.client.createTable(
 				`jdl_decision_${this.jurisdiction}`,
 				schema,
@@ -69,8 +73,8 @@ export class JudilibreRepository extends BaseRepository {
 		this.connect();
 
 		await this.client.query<Result>(
-			`INSERT INTO jdl_decision_${this.jurisdiction} (id, jurisdiction, location, chamber, number, decision_date, type, text, motivations, solution, summary)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			`INSERT INTO jdl_decision_${this.jurisdiction} (id, jurisdiction, location, chamber, number, decision_date, type, text, motivations, solution, summary, themes, visas)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			[
 				decision.id,
 				decision.jurisdiction,
@@ -83,6 +87,8 @@ export class JudilibreRepository extends BaseRepository {
 				JSON.stringify(decision.motivations),
 				decision.solution,
 				decision.summary,
+				JSON.stringify(decision.themes),
+				JSON.stringify(decision.visas),
 			],
 		);
 	}
@@ -111,9 +117,35 @@ export class JudilibreRepository extends BaseRepository {
 			motivations: JSON.parse(row.motivations),
 			solution: row.solution,
 			summary: row.summary,
+			themes: JSON.parse(row.themes),
+			visas: JSON.parse(row.visas),
 		};
 	}
 
+	async readAll(offset: number, size: number): Promise<JudilibreDecision[]> {
+		this.connect();
+
+		const [rows] = await this.client.query<Rows>(
+			`SELECT * FROM jdl_decision_${this.jurisdiction} LIMIT ? OFFSET ?`,
+			[size, offset],
+		);
+
+		return rows.map((row) => ({
+			id: row.id,
+			jurisdiction: row.jurisdiction,
+			location: row.location,
+			chamber: row.chamber,
+			number: row.number,
+			decisionDate: row.decision_date,
+			type: row.type,
+			text: row.text,
+			motivations: JSON.parse(row.motivations),
+			solution: row.solution,
+			summary: row.summary,
+			themes: JSON.parse(row.themes),
+			visas: JSON.parse(row.visas),
+		}));
+	}
 	async readByKeywords(keywords: string[]): Promise<JudilibreDecision[]> {
 		this.connect();
 
@@ -137,6 +169,8 @@ export class JudilibreRepository extends BaseRepository {
 			motivations: JSON.parse(row.motivations),
 			solution: row.solution,
 			summary: row.summary,
+			themes: JSON.parse(row.themes),
+			visas: JSON.parse(row.visas),
 		}));
 	}
 
@@ -146,7 +180,7 @@ export class JudilibreRepository extends BaseRepository {
 
 		await this.client.query(
 			`UPDATE jdl_decision_${this.jurisdiction} 
-             SET jurisdiction = ?, location = ?, chamber = ?, number = ?, decision_date = ?, type = ?, text = ?, motivations = ?, solution = ?, summary = ?
+             SET jurisdiction = ?, location = ?, chamber = ?, number = ?, decision_date = ?, type = ?, text = ?, motivations = ?, solution = ?, summary = ?, themes = ?, visas = ?
              WHERE id = ?`,
 			[
 				decision.jurisdiction,
@@ -160,6 +194,8 @@ export class JudilibreRepository extends BaseRepository {
 				decision.solution,
 				decision.summary,
 				decision.id,
+				JSON.stringify(decision.themes),
+				JSON.stringify(decision.visas),
 			],
 		);
 	}

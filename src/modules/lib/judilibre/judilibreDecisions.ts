@@ -26,6 +26,7 @@ import type { Collection } from "../../vector/collection";
 import vectorManager from "../../vector/vectorManager";
 import {
 	JudilibreCacheRepository,
+	type JudilibreDecision,
 	JudilibreRepository,
 } from "./judilibreRepository";
 import type { JudiDecision, Jurisdiction, Visa } from "./judilibreTypes";
@@ -112,14 +113,46 @@ export class JudilibreDecisions {
 						`decision id ${decisionCumulCount + currentIndex}: ${decision.id} - ${decision.location ?? decision.jurisdiction}${decision.chamber ? `, ${decision.chamber}` : ""} du ${this.buildDate(decision.decision_date)} n°${decision.number}`,
 					);
 
-					const decisionFound = await this.judilibreCacheRepository.read(
+					let summary = "";
+					if (decision.summary && decision.summary.trim() !== "") {
+						summary = decision.summary;
+					} else if (
+						decision.titlesAndSummaries &&
+						decision.titlesAndSummaries.length > 0
+					) {
+						summary = decision.titlesAndSummaries[0].summary;
+					}
+
+					decision.summary = summary;
+
+					if (decision.visa && decision.visa.length > 0) {
+						decision.visas = this.parseArticles(decision.visa);
+					} else {
+						decision.visas = [];
+					}
+					if (!decision.themes || decision.themes.length === 0) {
+						decision.themes = [];
+					}
+
+					const decisionFound = await this.judilibreRepository.read(
 						decision.id,
 					);
 					if (!decisionFound) {
 						try {
-							await this.judilibreCacheRepository.create({
+							await this.judilibreRepository.create({
 								id: decision.id,
+								jurisdiction: decision.jurisdiction,
+								location: decision.location ?? decision.jurisdiction,
+								chamber: decision.chamber ?? "",
+								number: decision.number ?? "unknown",
 								decisionDate: decision.decision_date,
+								type: decision.type,
+								text: decision.text,
+								motivations: decision.zones?.motivations ?? [],
+								solution: decision.solution,
+								summary: decision.summary || "",
+								themes: decision.themes,
+								visas: decision.visas,
 							});
 						} catch (error) {
 							console.error(
@@ -129,7 +162,6 @@ export class JudilibreDecisions {
 					}
 
 					if (this.abortController.controller.signal.aborted) {
-						console.log("Decisions IDs cache building aborted.");
 						processImportation = false;
 						break;
 					}
@@ -145,7 +177,11 @@ export class JudilibreDecisions {
 			decisionCumulCount += 10000;
 		}
 
-		console.log("Decision IDs cache building terminated.");
+		if (this.abortController.controller.signal.aborted) {
+			console.log("Decision IDs cache building aborted.");
+		} else {
+			console.log("Decision IDs cache building terminated.");
+		}
 	}
 
 	async addDecisions(): Promise<void> {
@@ -170,7 +206,12 @@ export class JudilibreDecisions {
 					continue;
 				}
 
-				const decitionsInDatabase = await this.judilibreCacheRepository.readAll(
+				if (this.abortController.controller.signal.aborted) {
+					processImportation = false;
+					break;
+				}
+
+				const decitionsInDatabase = await this.judilibreRepository.readAll(
 					decisionCumulCount,
 					10000,
 				);
@@ -186,36 +227,7 @@ export class JudilibreDecisions {
 					continue;
 				}
 
-				for (const decitionInDatabase of decitionsInDatabase) {
-					const decision = await this.invokeJudilibreDecision<JudiDecision>(
-						decitionInDatabase.id,
-						true,
-					);
-					if (!decision) {
-						console.error(`Decision not found: ${decitionInDatabase.id}`);
-						continue;
-					}
-					let summary = "";
-					if (decision.summary && decision.summary.trim() !== "") {
-						summary = decision.summary;
-					} else if (
-						decision.titlesAndSummaries &&
-						decision.titlesAndSummaries.length > 0
-					) {
-						summary = decision.titlesAndSummaries[0].summary;
-					}
-
-					decision.summary = summary;
-
-					if (decision.visa && decision.visa.length > 0) {
-						decision.visas = this.parseArticles(decision.visa);
-					} else {
-						decision.visas = [];
-					}
-					if (!decision.themes || decision.themes.length === 0) {
-						decision.themes = [];
-					}
-
+				for (const decision of decitionsInDatabase) {
 					const { dataToInsert, dataToSearch } =
 						this.buildDataToInsert(decision);
 
@@ -246,7 +258,7 @@ export class JudilibreDecisions {
 							);
 						}
 
-						await this.buildEmbeddingsFromTextZoneSegments(
+						await this.buildEmbeddingsFromMotivationSegments(
 							decision,
 							async (embedding: number[], zone: string, sentence: string) => {
 								dataToInsert.zone = zone;
@@ -268,39 +280,28 @@ export class JudilibreDecisions {
 								);
 							},
 						);
+						currentIndex++;
 
-						const decisionFound = await this.judilibreRepository.read(
-							decision.id,
+						console.log(
+							`decision ${decisionCumulCount + currentIndex}/${totalDecisions}: ${decision.id} - ${decision.location ?? decision.jurisdiction}${decision.chamber ? `, ${decision.chamber}` : ""} du ${this.buildDate(decision.decisionDate)} n°${decision.number}`,
 						);
-
-						if (!decisionFound) {
-							await this.judilibreRepository.create({
-								id: decision.id,
-								jurisdiction: decision.jurisdiction,
-								location: decision.location ?? decision.jurisdiction,
-								chamber: decision.chamber ?? "",
-								number: decision.number ?? "unknown",
-								decisionDate: decision.decision_date,
-								type: decision.type,
-								text: decision.text,
-								motivations: decision.zones?.motivations ?? [],
-								solution: decision.solution,
-								summary: decision.summary || "",
-							});
-							currentIndex++;
-
-							console.log(
-								`decision ${decisionCumulCount + currentIndex}/${totalDecisions}: ${decision.id} - ${decision.location ?? decision.jurisdiction}${decision.chamber ? `, ${decision.chamber}` : ""} du ${this.buildDate(decision.decision_date)} n°${decision.number}`,
-							);
-						}
 					} catch (error) {
 						console.error(`Error processing decision ${decision.id}: ${error}`);
 						processImportation = false;
 						this.abortController.controller.abort();
 						break;
 					}
+
+					if (this.abortController.controller.signal.aborted) {
+						processImportation = false;
+						break;
+					}
 				}
 				decisionCumulCount += decitionsInDatabase.length;
+
+				if (this.abortController.controller.signal.aborted) {
+					processImportation = false;
+				}
 			}
 		} catch (error) {
 			console.error(
@@ -308,7 +309,11 @@ export class JudilibreDecisions {
 			);
 		}
 
-		console.log("Decision importation terminated.");
+		if (this.abortController.controller.signal.aborted) {
+			console.log("Decision importation aborted.");
+		} else {
+			console.log("Decision importation terminated.");
+		}
 	}
 
 	parseArticles(visa: Visa[]): string[] {
@@ -326,20 +331,20 @@ export class JudilibreDecisions {
 		return new Intl.DateTimeFormat("fr-FR", options).format(dateObject);
 	}
 
-	private buildDataToInsert(decision: JudiDecision): {
+	private buildDataToInsert(decision: JudilibreDecision): {
 		dataToInsert: Record<string, string | object>;
 		dataToSearch: Record<string, string>;
 	} {
 		const dataToInsert: Record<string, string | object> = {
 			id: decision.id,
-			date: decision.decision_date,
+			date: decision.decisionDate,
 			jurisdiction: decision.jurisdiction,
 			chamber: decision.chamber || "",
 			number: decision.number || "unknown",
 		};
 		const dataToSearch = {
 			id: decision.id,
-			date: decision.decision_date,
+			date: decision.decisionDate,
 			jurisdiction: decision.jurisdiction,
 			chamber: decision.chamber || "",
 			number: decision.number || "unknown",
@@ -377,8 +382,9 @@ export class JudilibreDecisions {
 	}
 
 	private async prepareCacheDatabase(): Promise<void> {
-		await this.judilibreCacheRepository.initializeDatabase();
+		await this.judilibreRepository.initializeDatabase();
 	}
+
 	async retrieveJudilibreData<T>(judilibreUrl: string): Promise<T | undefined> {
 		let response: Response | AxiosResponse<T>;
 		response = await httpRequest<T>(judilibreUrl, {
@@ -442,27 +448,21 @@ export class JudilibreDecisions {
 		return authorization;
 	}
 
-	private async buildEmbeddingsFromTextZoneSegments(
-		decision: JudiDecision,
+	private async buildEmbeddingsFromMotivationSegments(
+		decision: JudilibreDecision,
 		addEmbedding: addEmbedding,
 	): Promise<void> {
-		if (!decision.zones || Object.keys(decision.zones).length === 0) {
+		if (!decision.motivations || decision.motivations.length === 0) {
 			await this.addEmbeddingsbySentences(decision.text, "text", addEmbedding);
 			return;
 		}
 
-		for (const [key, value] of Object.entries(decision.zones)) {
-			if (!value || value.length === 0) {
-				continue;
-			}
-
-			for (const textZone of value) {
-				await this.addEmbeddingsbySentences(
-					decision.text.substring(textZone.start, textZone.end),
-					key,
-					addEmbedding,
-				);
-			}
+		for (const motivation of decision.motivations) {
+			await this.addEmbeddingsbySentences(
+				decision.text.substring(motivation.start, motivation.end),
+				"motivations",
+				addEmbedding,
+			);
 		}
 	}
 
