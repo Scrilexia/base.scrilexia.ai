@@ -71,7 +71,7 @@ export class JudilibreDecisions {
 		this.embeddingInstance = createEmbedding(embeddingProvider, {});
 	}
 
-	async buildDecisionIdsList(): Promise<void> {
+	async addDecisionsToSql(): Promise<void> {
 		let blockIndex = 0;
 		const blockSize = DECISIONS_BLOCK_SIZE;
 		const blocksCount = DECISIONS_BLOCKS_COUNT;
@@ -86,14 +86,14 @@ export class JudilibreDecisions {
 				const data = await this.invokeJudilibreExportation<
 					Record<string, unknown>
 				>(this.#jurisdiction, blockIndex, blockSize, this.oldestDecisionDate);
-
-				if (!data || !("results" in data)) {
+				if (!data) {
 					console.error(
-						"Invalid data format received for block index:",
+						"No data received from Judilibre API for block index:",
 						blockIndex,
 					);
 					continue;
 				}
+
 				const decisions = data.results as JudiDecision[];
 				if (!decisions || decisions.length === 0) {
 					processImportation = false;
@@ -179,7 +179,7 @@ export class JudilibreDecisions {
 		}
 	}
 
-	async addDecisions(): Promise<void> {
+	async addDecisionsToQdrant(): Promise<void> {
 		await this.prepareDatabases();
 
 		const totalDecisions = (await this.judilibreRepository.count()) ?? 0;
@@ -486,38 +486,34 @@ export class JudilibreDecisions {
 	}
 }
 
-export class JudilibreDecisionsReset {
-	private abortController: Abort;
+export class JudilibreDecisionsQdrantReset {
 	private jurisdiction: string;
 
-	constructor(abortController: Abort, jurisdiction: string) {
-		this.abortController = abortController;
+	constructor(jurisdiction: string) {
 		this.jurisdiction = jurisdiction;
 	}
 
-	async resetDecisions(): Promise<void> {
+	async ImportQdrantReset(): Promise<void> {
 		const collections = await vectorManager.getCollections();
+
 		for (const collectionName of collections) {
-			if (collectionName.startsWith("judilibre_embeddings_")) {
+			if (
+				collectionName.startsWith(`judilibre_embeddings_${this.jurisdiction}`)
+			) {
 				await vectorManager.deleteCollection(collectionName);
 			}
 		}
-
-		const repository = new JudilibreRepository(this.jurisdiction);
-		await repository.deleteTable();
 	}
 }
 
-export class JudilibreDecisionsCacheReset {
-	private abortController: Abort;
+export class JudilibreDecisionsSqlReset {
 	private jurisdiction: string;
 
-	constructor(jurisdiction: string, abortController: Abort) {
-		this.abortController = abortController;
+	constructor(jurisdiction: string) {
 		this.jurisdiction = jurisdiction;
 	}
 
-	async resetCache(): Promise<void> {
+	async ImportSqlReset(): Promise<void> {
 		const repository = new JudilibreRepository(this.jurisdiction);
 		await repository.deleteTable();
 	}

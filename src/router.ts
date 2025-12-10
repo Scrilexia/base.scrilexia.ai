@@ -8,11 +8,11 @@ import {
 } from "./modules/lib/legiFrance/legiFranceActions";
 
 import {
-	judilibreDecisionsCache,
-	judilibreDecisionsCacheReset,
-	judilibreDecisionsImportation,
-	judilibreDecisionsImportationAbort,
-	judilibreDecisionsImportationReset,
+	judilibreDecisionsImportSql,
+	judilibreDecisionsImportSqlReset,
+	judilibreDecisionsImportVector,
+	judilibreDecisionsImportAbort,
+	judilibreDecisionsImportVectorReset,
 } from "./modules/lib/judilibre/judilibreActions";
 import { Abort } from "./utils/abortController";
 
@@ -26,11 +26,11 @@ router.post("/api/articles", legiFranceAddArticles);
 router.post("/api/articles/abort", legiFranceAddArticlesAbort);
 router.post("/api/articles/reset", legiFranceResetArticles);
 
-router.post("/api/decisions", judilibreDecisionsImportation);
-router.post("/api/decisions/cache", judilibreDecisionsCache);
-router.post("/api/decisions/cache/reset", judilibreDecisionsCacheReset);
-router.post("/api/decisions/abort", judilibreDecisionsImportationAbort);
-router.post("/api/decisions/reset", judilibreDecisionsImportationReset);
+router.post("/api/decisions/vector", judilibreDecisionsImportVector);
+router.post("/api/decisions/vector/reset", judilibreDecisionsImportVectorReset);
+router.post("/api/decisions/sql", judilibreDecisionsImportSql);
+router.post("/api/decisions/sql/reset", judilibreDecisionsImportSqlReset);
+router.post("/api/decisions/abort", judilibreDecisionsImportAbort);
 
 router.post("/api/laws", legiFranceAddArticlesAndLaws);
 router.post("/api/laws/abort", legiFranceAddArticlesAndLawsAbort);

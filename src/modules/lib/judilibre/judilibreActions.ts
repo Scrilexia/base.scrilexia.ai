@@ -2,11 +2,11 @@ import type { RequestHandler } from "express";
 import { judilibreDecisionsImportationAbortController } from "../../../router";
 import {
 	JudilibreDecisions,
-	JudilibreDecisionsCacheReset,
-	JudilibreDecisionsReset,
+	JudilibreDecisionsSqlReset,
+	JudilibreDecisionsQdrantReset,
 } from "./judilibreDecisions";
 
-export const judilibreDecisionsImportation: RequestHandler = async (
+export const judilibreDecisionsImportVector: RequestHandler = async (
 	req,
 	res,
 	next,
@@ -19,11 +19,11 @@ export const judilibreDecisionsImportation: RequestHandler = async (
 		req.body.max_decisions_to_import || -1,
 	);
 
-	judilibreDecisions.addDecisions();
+	judilibreDecisions.addDecisionsToQdrant();
 	res.status(200).send("Importation started");
 };
 
-export const judilibreDecisionsCache: RequestHandler = async (
+export const judilibreDecisionsImportSql: RequestHandler = async (
 	req,
 	res,
 	next,
@@ -34,24 +34,21 @@ export const judilibreDecisionsCache: RequestHandler = async (
 		judilibreDecisionsImportationAbortController,
 	);
 
-	judilibreDecisions.buildDecisionIdsList();
+	judilibreDecisions.addDecisionsToSql();
 	res.status(200).send("Cache building started");
 };
 
-export const judilibreDecisionsCacheReset: RequestHandler = async (
+export const judilibreDecisionsImportSqlReset: RequestHandler = async (
 	req,
 	res,
 	next,
 ) => {
-	const judilibre = new JudilibreDecisionsCacheReset(
-		req.body.jurisdiction,
-		judilibreDecisionsImportationAbortController,
-	);
-	await judilibre.resetCache();
+	const judilibre = new JudilibreDecisionsSqlReset(req.body.jurisdiction);
+	await judilibre.ImportSqlReset();
 	res.status(200).send("Cache reset completed");
 };
 
-export const judilibreDecisionsImportationAbort: RequestHandler = async (
+export const judilibreDecisionsImportAbort: RequestHandler = async (
 	req,
 	res,
 	next,
@@ -60,16 +57,13 @@ export const judilibreDecisionsImportationAbort: RequestHandler = async (
 	res.status(200).send("OK");
 };
 
-export const judilibreDecisionsImportationReset: RequestHandler = async (
+export const judilibreDecisionsImportVectorReset: RequestHandler = async (
 	req,
 	res,
 	next,
 ) => {
 	judilibreDecisionsImportationAbortController.reset();
-	const legiFrance = new JudilibreDecisionsReset(
-		judilibreDecisionsImportationAbortController,
-		req.body.jurisdiction,
-	);
-	await legiFrance.resetDecisions();
+	const legiFrance = new JudilibreDecisionsQdrantReset(req.body.jurisdiction);
+	await legiFrance.ImportQdrantReset();
 	res.status(200).send("OK");
 };
