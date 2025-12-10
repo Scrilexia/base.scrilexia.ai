@@ -25,7 +25,6 @@ import {
 import type { Collection } from "../../vector/collection";
 import vectorManager from "../../vector/vectorManager";
 import {
-	JudilibreCacheRepository,
 	type JudilibreDecision,
 	JudilibreRepository,
 } from "./judilibreRepository";
@@ -44,7 +43,6 @@ export class JudilibreDecisions {
 	private abortController: Abort;
 	private oldestDecisionDate: Date;
 	private judilibreRepository: JudilibreRepository;
-	private judilibreCacheRepository: JudilibreCacheRepository;
 	private embeddingInstance: EmbeddingInterface;
 	private maxDecisionsToImport = -1;
 
@@ -61,9 +59,6 @@ export class JudilibreDecisions {
 		this.oldestDecisionDate = endDate;
 		this.abortController = abortController;
 		this.judilibreRepository = new JudilibreRepository(this.#jurisdiction);
-		this.judilibreCacheRepository = new JudilibreCacheRepository(
-			this.#jurisdiction,
-		);
 		const embeddingProviderString = getEnvValue("embedding_provider");
 		let embeddingProvider = EmbeddingProviders.Ollama;
 		if (
@@ -187,7 +182,7 @@ export class JudilibreDecisions {
 	async addDecisions(): Promise<void> {
 		await this.prepareDatabases();
 
-		const totalDecisions = (await this.judilibreCacheRepository.count()) ?? 0;
+		const totalDecisions = (await this.judilibreRepository.count()) ?? 0;
 
 		let currentIndex = 0;
 		let processImportation = true;
@@ -523,7 +518,7 @@ export class JudilibreDecisionsCacheReset {
 	}
 
 	async resetCache(): Promise<void> {
-		const repository = new JudilibreCacheRepository(this.jurisdiction);
+		const repository = new JudilibreRepository(this.jurisdiction);
 		await repository.deleteTable();
 	}
 }
