@@ -127,7 +127,7 @@ export class JudilibreRepository extends BaseRepository {
 		this.connect();
 
 		const [rows] = await this.client.query<Rows>(
-			`SELECT * FROM jdl_decision_${this.jurisdiction} LIMIT ? OFFSET ?`,
+			`SELECT * FROM jdl_decision_${this.jurisdiction} ORDER BY decision_date DESC LIMIT ? OFFSET ?`,
 			[size, offset],
 		);
 
@@ -153,7 +153,7 @@ export class JudilibreRepository extends BaseRepository {
 		this.connect();
 
 		const [rows] = await this.client.query<Rows>(
-			`SELECT COUNT(*) as count FROM jdl_decision_cache_${this.jurisdiction}`,
+			`SELECT COUNT(*) as count FROM jdl_decision_${this.jurisdiction}`,
 		);
 
 		return rows[0].count;
