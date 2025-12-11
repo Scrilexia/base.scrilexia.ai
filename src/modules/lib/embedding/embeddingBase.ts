@@ -1,5 +1,6 @@
 export interface EmbeddingInterface {
 	embed(text: string): Promise<number[]>;
+	embedBatch(texts: string[]): Promise<Array<number[]>>;
 	getDimension(): Promise<number>;
 }
 
@@ -10,5 +11,6 @@ export abstract class EmbeddingBase implements EmbeddingInterface {
 	}
 
 	abstract embed(text: string): Promise<number[]>;
+	abstract embedBatch(texts: string[]): Promise<Array<number[]>>;
 	abstract getDimension(): Promise<number>;
 }

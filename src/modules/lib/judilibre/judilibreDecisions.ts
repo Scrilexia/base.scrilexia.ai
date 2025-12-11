@@ -476,12 +476,13 @@ export class JudilibreDecisions {
 				return;
 		}
 
-		for (const chunk of sentences) {
-			const embedding = await trySeveralTimes<number[]>(
-				async () => await this.embeddingInstance.embed(chunk),
-			);
+		const embeddings: number[][] =
+			await this.embeddingInstance.embedBatch(sentences);
 
-			await addEmbedding(embedding, zone, shortenWithEllipsis(chunk));
+		for (let i = 0; i < sentences.length; i++) {
+			const embedding = embeddings[i];
+			const sentence = sentences[i];
+			await addEmbedding(embedding, zone, shortenWithEllipsis(sentence));
 		}
 	}
 }

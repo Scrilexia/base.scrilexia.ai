@@ -23,6 +23,14 @@ export class OllamaEmbedding extends EmbeddingBase {
 		return response.embeddings[0];
 	}
 
+	async embedBatch(texts: string[]): Promise<Array<number[]>> {
+		const response = await this.client.embed({
+			model: this.model,
+			input: texts,
+		});
+		return response.embeddings;
+	}
+
 	async getDimension(): Promise<number> {
 		const response = await this.client.embed({
 			model: this.model,

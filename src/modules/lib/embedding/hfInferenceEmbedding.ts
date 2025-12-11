@@ -46,6 +46,15 @@ export class HfInferenceEmbedding extends EmbeddingBase {
 		return embedding;
 	}
 
+	async embedBatch(texts: string[]): Promise<Array<number[]>> {
+		const embeddings: Array<number[]> = [];
+		for (const text of texts) {
+			const embedding = await this.embed(text);
+			embeddings.push(embedding);
+		}
+		return embeddings;
+	}
+
 	async getDimension(): Promise<number> {
 		const result = await this.hfClient.featureExtraction({
 			model: this.model,
