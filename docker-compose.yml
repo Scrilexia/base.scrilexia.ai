@@ -36,7 +36,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "6.75"
+          cpus: "8.0"
 
 volumes:
   qdrant_legifrance_judilibre_data:
