@@ -226,6 +226,12 @@ export class JudilibreDecisions {
 				}
 
 				for (const decision of decitionsInDatabase) {
+					currentIndex++;
+
+					console.log(
+						`decision ${decisionCumulCount + currentIndex}/${totalDecisions}: ${decision.id} - ${decision.location ?? decision.jurisdiction}${decision.chamber ? `, ${decision.chamber}` : ""} du ${this.buildDate(decision.decisionDate)} n°${decision.number}`,
+					);
+
 					const { dataToInsert, dataToSearch } =
 						this.buildDataToInsert(decision);
 
@@ -278,11 +284,6 @@ export class JudilibreDecisions {
 									dataToInsert,
 								);
 							},
-						);
-						currentIndex++;
-
-						console.log(
-							`decision ${decisionCumulCount + currentIndex}/${totalDecisions}: ${decision.id} - ${decision.location ?? decision.jurisdiction}${decision.chamber ? `, ${decision.chamber}` : ""} du ${this.buildDate(decision.decisionDate)} n°${decision.number}`,
 						);
 					} catch (error) {
 						console.error(`Error processing decision ${decision.id}: ${error}`);
