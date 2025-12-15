@@ -16,6 +16,7 @@ export const judilibreDecisionsImportVector: RequestHandler = async (
 		req.body.jurisdiction ?? "cc",
 		new Date(Date.now()),
 		judilibreDecisionsImportationAbortController,
+		req.body.start_index || 0,
 		req.body.max_decisions_to_import || -1,
 	);
 

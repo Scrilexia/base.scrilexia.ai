@@ -44,16 +44,19 @@ export class JudilibreDecisions {
 	private oldestDecisionDate: Date;
 	private judilibreRepository: JudilibreRepository;
 	private embeddingInstance: EmbeddingInterface;
+	private startIndex = 0;
 	private maxDecisionsToImport = -1;
 
 	constructor(
 		jurisdiction: Jurisdiction,
 		endDate: Date,
 		abortController: Abort,
+		startIndex = 0,
 		maxDecisionsToImport = -1,
 	) {
 		this.#jurisdiction = jurisdiction;
 		this.#endDate = endDate;
+		this.startIndex = startIndex;
 		this.maxDecisionsToImport = maxDecisionsToImport;
 
 		this.oldestDecisionDate = endDate;
@@ -186,7 +189,7 @@ export class JudilibreDecisions {
 
 		let currentIndex = 0;
 		let processImportation = true;
-		let decisionCumulCount = 0;
+		let decisionCumulCount = this.startIndex;
 
 		try {
 			while (processImportation) {
