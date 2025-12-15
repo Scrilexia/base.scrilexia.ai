@@ -231,6 +231,7 @@ export class JudilibreDecisions {
 
 					try {
 						if (decision.summary && decision.summary.trim() !== "") {
+							console.log("\t- index summary");
 							await this.addEmbeddingsbySentences(
 								decision.summary,
 								"summary",
@@ -451,11 +452,15 @@ export class JudilibreDecisions {
 		addEmbedding: addEmbedding,
 	): Promise<void> {
 		if (!decision.motivations || decision.motivations.length === 0) {
+			console.log("\t- index full text");
 			await this.addEmbeddingsbySentences(decision.text, "text", addEmbedding);
 			return;
 		}
 
 		for (const motivation of decision.motivations) {
+			console.log(
+				`\t- index motivation segment (${motivation.start},${motivation.end})`,
+			);
 			await this.addEmbeddingsbySentences(
 				decision.text.substring(motivation.start, motivation.end),
 				"motivations",
