@@ -5,18 +5,39 @@ import {
 } from "../../../router";
 import { LegiFranceCodes, LegiFranceCodesReset } from "./legiFranceCodes";
 import { LegiFranceLaws } from "./legiFranceLaws";
+import { legiFranceStorageTarget } from "./legiFranceTypes";
 
-export const legiFranceAddArticles: RequestHandler = async (req, res, next) => {
+export const legiFranceArticlesImportSql: RequestHandler = async (
+	req,
+	res,
+	next,
+) => {
 	legiFranceAddArticlesAbortController.reset();
 	const legiFrance = new LegiFranceCodes(
-		req.body.code,
+		req.body.codes,
 		legiFranceAddArticlesAbortController,
+		legiFranceStorageTarget.SQL,
 	);
-	legiFrance.addArticles();
+	legiFrance.addArticlesToSql();
 	res.status(200).send("OK");
 };
 
-export const legiFranceAddArticlesAbort: RequestHandler = async (
+export const legiFranceArticlesImportQdrant: RequestHandler = async (
+	req,
+	res,
+	next,
+) => {
+	legiFranceAddArticlesAbortController.reset();
+	const legiFrance = new LegiFranceCodes(
+		req.body.codes,
+		legiFranceAddArticlesAbortController,
+		legiFranceStorageTarget.QDRANT,
+	);
+	legiFrance.addArticlesFromSqlToQdrant();
+	res.status(200).send("OK");
+};
+
+export const legiFranceArticlesImportAbort: RequestHandler = async (
 	req,
 	res,
 	next,
@@ -25,7 +46,7 @@ export const legiFranceAddArticlesAbort: RequestHandler = async (
 	res.status(200).send("OK");
 };
 
-export const legiFranceResetArticles: RequestHandler = async (
+export const legiFranceResetArticlesSql: RequestHandler = async (
 	req,
 	res,
 	next,
@@ -33,11 +54,27 @@ export const legiFranceResetArticles: RequestHandler = async (
 	legiFranceAddArticlesAbortController.reset();
 	const legiFrance = new LegiFranceCodesReset(
 		legiFranceAddArticlesAbortController,
+		legiFranceStorageTarget.SQL,
 	);
 	await legiFrance.resetArticles();
 	res.status(200).send("OK");
 };
-export const legiFranceAddArticlesAndLaws: RequestHandler = async (
+
+export const legiFranceResetArticlesQdrant: RequestHandler = async (
+	req,
+	res,
+	next,
+) => {
+	legiFranceAddArticlesAbortController.reset();
+	const legiFrance = new LegiFranceCodesReset(
+		legiFranceAddArticlesAbortController,
+		legiFranceStorageTarget.QDRANT,
+	);
+	await legiFrance.resetArticles();
+	res.status(200).send("OK");
+};
+
+export const legiFranceArticlesAndLawsImportSql: RequestHandler = async (
 	req,
 	res,
 	next,
@@ -45,12 +82,27 @@ export const legiFranceAddArticlesAndLaws: RequestHandler = async (
 	legiFranceAddArticlesAndLawsAbortController.reset();
 	const legiFrance = new LegiFranceLaws(
 		legiFranceAddArticlesAndLawsAbortController,
+		legiFranceStorageTarget.SQL,
 	);
 	legiFrance.addLaws();
 	res.status(200).send("OK");
 };
 
-export const legiFranceAddArticlesAndLawsAbort: RequestHandler = async (
+export const legiFranceArticlesAndLawsImportQdrant: RequestHandler = async (
+	req,
+	res,
+	next,
+) => {
+	legiFranceAddArticlesAndLawsAbortController.reset();
+	const legiFrance = new LegiFranceLaws(
+		legiFranceAddArticlesAndLawsAbortController,
+		legiFranceStorageTarget.QDRANT,
+	);
+	legiFrance.addLaws();
+	res.status(200).send("OK");
+};
+
+export const legiFranceArticlesAndLawsImportAbort: RequestHandler = async (
 	req,
 	res,
 	next,

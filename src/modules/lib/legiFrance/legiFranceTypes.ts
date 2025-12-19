@@ -1,3 +1,8 @@
+export enum legiFranceStorageTarget {
+	SQL = 1,
+	QDRANT = 2,
+}
+
 export class ArticleSearchResult {
 	id: string;
 	num: string;

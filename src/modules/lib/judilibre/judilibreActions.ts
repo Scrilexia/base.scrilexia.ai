@@ -2,8 +2,8 @@ import type { RequestHandler } from "express";
 import { judilibreDecisionsImportationAbortController } from "../../../router";
 import {
 	JudilibreDecisions,
-	JudilibreDecisionsSqlReset,
 	JudilibreDecisionsQdrantReset,
+	JudilibreDecisionsSqlReset,
 } from "./judilibreDecisions";
 
 export const judilibreDecisionsImportVector: RequestHandler = async (

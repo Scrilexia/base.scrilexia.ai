@@ -10,73 +10,123 @@ import {
 	type CodeSearchResults,
 	type LegiFranceCodeArticleOnline,
 	type LegiFranceCodeOnline,
+	legiFranceStorageTarget,
 } from "./legiFranceTypes";
 
 export class LegiFranceCodes extends LegiFranceBase {
-	#code: string;
+	#codes: string[] = [];
 
-	constructor(code: string, abortController: Abort) {
-		super(abortController);
-		this.#code = code;
+	constructor(
+		codes: string[],
+		abortController: Abort,
+		target: legiFranceStorageTarget,
+	) {
+		super(abortController, target);
+		this.#codes = codes;
 	}
 
-	set code(value: string) {
-		this.#code = value;
+	set codes(value: string[]) {
+		this.#codes = value;
 	}
 
-	get code(): string {
-		return this.#code;
+	get codes(): string[] {
+		return this.#codes;
 	}
 
 	toString(): string {
-		return this.#code;
+		return this.#codes.join(", ");
 	}
 
-	async addArticles(): Promise<void> {
+	async addArticlesToSql(): Promise<void> {
 		this.abortController.reset();
 
 		// Implementation to add articles based on this.#code
 
 		await this.prepareDatabases();
-		const code = await this.searchCodes();
 
-		if (!code) {
-			throw new Error(`Code not found: ${this.#code}`);
+		for (const codeName of this.#codes) {
+			const code = await this.searchCodes(codeName);
+
+			if (!code) {
+				console.warn(`Code not found: ${code}`);
+				continue;
+			}
+
+			const codeFound = await legiFranceCodeOrLawRepository.read(code.id);
+			try {
+				if (!codeFound) {
+					await legiFranceCodeOrLawRepository.create({
+						id: code.id,
+						title: code.titre,
+						titleFull: code.titre,
+						state: code.etat,
+						startDate: new Date(code.dateDebut),
+						endDate: code.dateFin
+							? new Date(code.dateFin)
+							: new Date(Date.now()),
+					});
+				}
+			} catch (error) {
+				console.error(`Error processing decision id ${code.id}: ${error}`);
+			}
+
+			await this.retrieveArticlesIdsFromCode(code);
 		}
 
-		try {
-			await legiFranceCodeOrLawRepository.create({
-				id: code.id,
-				title: code.titre,
-				titleFull: code.titre,
-				state: code.etat,
-				startDate: new Date(code.dateDebut),
-				endDate: code.dateFin ? new Date(code.dateFin) : new Date(Date.now()),
-			});
-		} catch (_error) {
-			// already exists
-			await legiFranceCodeOrLawRepository.update({
-				id: code.id,
-				title: code.titre,
-				titleFull: code.titre,
-				state: code.etat,
-				startDate: new Date(code.dateDebut),
-				endDate: code.dateFin ? new Date(code.dateFin) : new Date(Date.now()),
-			});
-		}
-
-		await this.retrieveArticlesIdsFromCode(code);
 		await legiFranceCodeOrLawRepository.disconnect();
 		await legiFranceArticleRepository.disconnect();
 	}
 
-	private async searchCodes(): Promise<CodeSearchResult | null> {
+	async addArticlesFromSqlToQdrant(): Promise<void> {
+		await this.prepareDatabases();
+		const codes = await legiFranceCodeOrLawRepository.readAll();
+
+		for (const code of codes) {
+			const articles = await legiFranceArticleRepository.readAllByCodeId(
+				code.id,
+			);
+
+			let index = 0;
+			for (const article of articles) {
+				console.log(
+					`Article ${article.number} du ${code.title} (${++index}/${articles.length})`,
+				);
+
+				await this.insertArticle(
+					{
+						id: article.id,
+						num: article.number,
+						texte: article.text,
+						etat: article.state,
+						dateDebut: article.startDate
+							? article.startDate.getTime()
+							: Date.now(),
+						dateFin: article.endDate
+							? article.endDate.getTime()
+							: new Date(2999, 0, 1, 0, 0, 0, 0).getTime(),
+						dateVersion: article.startDate
+							? article.startDate.toISOString()
+							: new Date().toISOString(),
+					},
+					code.id,
+					code.title,
+				);
+			}
+		}
+
+		await legiFranceCodeOrLawRepository.disconnect();
+		await legiFranceArticleRepository.disconnect();
+	}
+
+	private async searchCodes(
+		codeName: string,
+	): Promise<CodeSearchResult | null> {
 		const body = {
 			sort: "TITLE_ASC",
 			pageSize: 10,
 			states: ["VIGUEUR", "ABROGE", "VIGUEUR_DIFF"],
 			pageNumber: 1,
-			codeName: this.#code,
+			codeName: codeName,
 		};
 
 		try {
@@ -92,7 +142,7 @@ export class LegiFranceCodes extends LegiFranceBase {
 
 			const index = data.results.findIndex(
 				(code) =>
-					code.titre.toLowerCase() === this.#code.toLowerCase() &&
+					code.titre.toLowerCase() === codeName.toLowerCase() &&
 					code.etat === "VIGUEUR",
 			);
 			return index !== -1 ? data.results[index] : null;
@@ -213,17 +263,21 @@ export class LegiFranceCodes extends LegiFranceBase {
 
 export class LegiFranceCodesReset extends LegiFranceBase {
 	async resetArticles(): Promise<void> {
-		const collections = await vectorManager.getCollections();
-		for (const collectionName of collections) {
-			if (collectionName.startsWith("legifrance_embeddings_")) {
-				await vectorManager.deleteCollection(collectionName);
+		if (this.target & legiFranceStorageTarget.QDRANT) {
+			const collections = await vectorManager.getCollections();
+			for (const collectionName of collections) {
+				if (collectionName.startsWith("legifrance_embeddings_")) {
+					await vectorManager.deleteCollection(collectionName);
+				}
 			}
 		}
 
-		await legiFranceArticleRepository.deleteTable();
-		await legiFranceCodeOrLawRepository.deleteTable();
+		if (this.target & legiFranceStorageTarget.SQL) {
+			await legiFranceArticleRepository.deleteTable();
+			await legiFranceCodeOrLawRepository.deleteTable();
 
-		await legiFranceCodeOrLawRepository.disconnect();
-		await legiFranceArticleRepository.disconnect();
+			await legiFranceCodeOrLawRepository.disconnect();
+			await legiFranceArticleRepository.disconnect();
+		}
 	}
 }

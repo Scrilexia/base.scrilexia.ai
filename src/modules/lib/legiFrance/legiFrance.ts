@@ -21,6 +21,7 @@ import {
 	ArticleSearchResult,
 	type LegiFranceCodeArticleOnline,
 	type LegiFranceCodeSectionOnline,
+	legiFranceStorageTarget,
 } from "./legiFranceTypes";
 
 import { CHUNK_SIZE } from "../../../types/constants";
@@ -34,20 +35,29 @@ export class LegiFranceBase {
 	protected hfModel: string | null = null;
 	protected collection: Collection | null = null;
 	protected abortController: Abort;
-	protected embeddingInstance: EmbeddingInterface;
+	protected embeddingInstance: EmbeddingInterface | null;
+	protected target: legiFranceStorageTarget;
 
-	constructor(abortController: Abort) {
+	constructor(abortController: Abort, target: legiFranceStorageTarget) {
 		this.abortController = abortController;
-		const embeddingProviderString = getEnvValue("embedding_provider");
-		let embeddingProvider = EmbeddingProviders.Ollama;
-		if (
-			embeddingProviderString &&
-			isEnum(EmbeddingProviders, embeddingProviderString)
-		) {
-			embeddingProvider = getEnum(EmbeddingProviders, embeddingProviderString);
-		}
+		this.target = target;
+		this.embeddingInstance = null;
 
-		this.embeddingInstance = createEmbedding(embeddingProvider, {});
+		if (target & legiFranceStorageTarget.QDRANT) {
+			const embeddingProviderString = getEnvValue("embedding_provider");
+			let embeddingProvider = EmbeddingProviders.Ollama;
+			if (
+				embeddingProviderString &&
+				isEnum(EmbeddingProviders, embeddingProviderString)
+			) {
+				embeddingProvider = getEnum(
+					EmbeddingProviders,
+					embeddingProviderString,
+				);
+			}
+
+			this.embeddingInstance = createEmbedding(embeddingProvider, {});
+		}
 	}
 
 	protected async prepareDatabases(): Promise<void> {
@@ -55,13 +65,16 @@ export class LegiFranceBase {
 		await legiFranceArticleRepository.initializeDatabase();
 
 		await connectLegiFrance();
-		vectorManager.size = await this.embeddingInstance.getDimension();
+		if (this.target & legiFranceStorageTarget.QDRANT) {
+			vectorManager.size =
+				(await this.embeddingInstance?.getDimension()) ?? 1024;
 
-		const collectionName = `legifrance_embeddings_${vectorManager.size}`;
-		if (!(await vectorManager.collectionExists(collectionName))) {
-			this.collection = await vectorManager.createCollection(collectionName);
-		} else {
-			this.collection = await vectorManager.getCollection(collectionName);
+			const collectionName = `legifrance_embeddings_${vectorManager.size}`;
+			if (!(await vectorManager.collectionExists(collectionName))) {
+				this.collection = await vectorManager.createCollection(collectionName);
+			} else {
+				this.collection = await vectorManager.getCollection(collectionName);
+			}
 		}
 	}
 
@@ -133,7 +146,7 @@ export class LegiFranceBase {
 		const retrievedArticleIds: LegiFranceCodeArticleOnline[] = [];
 
 		for (const article of articles) {
-			article.num = article.num.trim() ?? "";
+			article.num = article.num?.trim() ?? "";
 		}
 		retrievedArticleIds.push(...articles);
 
@@ -199,64 +212,95 @@ export class LegiFranceBase {
 			return;
 		}
 
-		const chunks = await splitTextWithtokens(articleDetails.texte, CHUNK_SIZE);
-
-		for (const chunk of chunks) {
-			const embedding = await trySeveralTimes<number[]>(
-				async () => await this.embeddingInstance.embed(chunk),
+		if (this.target & legiFranceStorageTarget.QDRANT) {
+			const chunks = await splitTextWithtokens(
+				articleDetails.texte,
+				CHUNK_SIZE,
 			);
 
-			const length = (await this.collection?.getCount()) ?? 0;
-			let index = length + 1;
-			const searchResult = await this.collection?.search({
-				id: articleDetails.id,
-				num: articleDetails.num,
-				lawTitle: codeOrLawTitle,
-				sentence: `${chunk.substring(0, 30)}...`,
-			});
-			if (searchResult && searchResult.points.length > 0) {
-				index = searchResult.points[0].id as number;
-			}
-			await this.collection?.addEmbedding(embedding, index, {
-				id: articleDetails.id,
-				date: articleDetails.dateVersion,
-				num: articleDetails.num,
-				lawTitle: codeOrLawTitle,
-				sentence: `${chunk.substring(0, 30)}...`, // Store the first 30 characters of the chunk
-			});
+			for (const chunk of chunks) {
+				const embedding = await trySeveralTimes<number[]>(
+					async () =>
+						(await this.embeddingInstance?.embed(chunk)) ??
+						Array<number>(vectorManager.size).fill(0),
+				);
 
-			if (this.abortController.controller.signal.aborted) {
-				console.log("Aborting...");
-				return;
+				const length = (await this.collection?.getCount()) ?? 0;
+				let index = length + 1;
+				const searchResult = await this.collection?.search({
+					id: articleDetails.id,
+					num: articleDetails.num,
+					lawTitle: codeOrLawTitle,
+					sentence: `${chunk.substring(0, 30)}...`,
+				});
+				if (searchResult && searchResult.points.length > 0) {
+					index = searchResult.points[0].id as number;
+				}
+				await this.collection?.addEmbedding(embedding, index, {
+					id: articleDetails.id,
+					date: articleDetails.dateVersion,
+					num: articleDetails.num,
+					lawTitle: codeOrLawTitle,
+					sentence: `${chunk.substring(0, 30)}...`, // Store the first 30 characters of the chunk
+				});
+
+				if (this.abortController.controller.signal.aborted) {
+					console.log("Aborting...");
+					return;
+				}
 			}
 		}
 
-		try {
-			await legiFranceArticleRepository.create({
-				id: articleDetails.id,
-				number: articleDetails.num,
-				text: articleDetails.texte,
-				state: articleDetails.etat,
-				startDate: toDate(articleDetails.dateDebut, new Date(Date.now())),
-				endDate: toDate(
-					articleDetails.dateFin,
-					new Date(2999, 0, 1, 0, 0, 0, 0),
-				),
-				codeId: codeOrLawId,
-			});
-		} catch (_error) {
-			await legiFranceArticleRepository.update({
-				id: articleDetails.id,
-				codeId: codeOrLawId,
-				number: articleDetails.num,
-				text: articleDetails.texte,
-				state: articleDetails.etat,
-				startDate: toDate(articleDetails.dateDebut, new Date(Date.now())),
-				endDate: toDate(
-					articleDetails.dateFin,
-					new Date(2999, 0, 1, 0, 0, 0, 0),
-				),
-			});
+		if (this.target & legiFranceStorageTarget.SQL) {
+			try {
+				const articleDetailsFound = await legiFranceArticleRepository.read(
+					articleDetails.id,
+				);
+				if (articleDetailsFound) {
+					const dateDebut = toDate(
+						articleDetails.dateDebut,
+						new Date(Date.now()),
+					);
+					const dateFin = toDate(
+						articleDetails.dateFin,
+						new Date(2999, 0, 1, 0, 0, 0, 0),
+					);
+
+					if (
+						articleDetailsFound.state !== articleDetails.etat ||
+						articleDetailsFound.startDate?.getTime() !== dateDebut.getTime() ||
+						articleDetailsFound.endDate?.getTime() !== dateFin.getTime()
+					) {
+						await legiFranceArticleRepository.update({
+							id: articleDetails.id,
+							number: articleDetails.num,
+							text: articleDetails.texte,
+							state: articleDetails.etat,
+							startDate: dateDebut,
+							endDate: dateFin,
+							codeId: codeOrLawId,
+						});
+					}
+					return;
+				}
+
+				await legiFranceArticleRepository.create({
+					id: articleDetails.id,
+					number: articleDetails.num,
+					text: articleDetails.texte,
+					state: articleDetails.etat,
+					startDate: toDate(articleDetails.dateDebut, new Date(Date.now())),
+					endDate: toDate(
+						articleDetails.dateFin,
+						new Date(2999, 0, 1, 0, 0, 0, 0),
+					),
+					codeId: codeOrLawId,
+				});
+			} catch (error) {
+				console.error(
+					`Error processing decision id ${articleDetails.id}: ${error}`,
+				);
+			}
 		}
 	}
 }

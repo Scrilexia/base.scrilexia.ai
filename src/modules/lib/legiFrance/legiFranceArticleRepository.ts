@@ -108,6 +108,22 @@ class LegiFranceCodeOrLawRepository extends BaseRepository {
 		}));
 	}
 
+	async readAllLaws(): Promise<LegiFranceCode[]> {
+		this.connect();
+
+		const [rows] = await this.client.query<Rows>(
+			"SELECT * FROM lf_code_law WHERE title LIKE 'LOI n° %'",
+		);
+		return rows.map((row) => ({
+			id: row.id,
+			title: row.title,
+			state: row.state,
+			titleFull: row.title_full,
+			startDate: row.start_date,
+			endDate: row.end_date,
+		}));
+	}
+
 	// update
 	async update(code: LegiFranceCode): Promise<void> {
 		this.connect();
@@ -202,6 +218,23 @@ export class LegiFranceArticleRepository extends BaseRepository {
 			startDate: row.start_date,
 			endDate: row.end_date,
 		};
+	}
+
+	async readAllByCodeId(codeId: string): Promise<LegiFranceCodeArticle[]> {
+		this.connect();
+		const [rows] = await this.client.query<Rows>(
+			"SELECT * FROM lf_article WHERE code_id = ?",
+			[codeId],
+		);
+		return rows.map((row) => ({
+			id: row.id,
+			codeId: row.code_id,
+			number: row.number,
+			text: row.text,
+			state: row.state,
+			startDate: row.start_date,
+			endDate: row.end_date,
+		}));
 	}
 
 	async readByCodeId(

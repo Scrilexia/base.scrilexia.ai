@@ -15,7 +15,6 @@ import {
 	setEnvValue,
 	shortenWithEllipsis,
 	splitTextWithtokens,
-	trySeveralTimes,
 } from "../../../utils/environment";
 import type { EmbeddingInterface } from "../../lib/embedding/embeddingBase";
 import {

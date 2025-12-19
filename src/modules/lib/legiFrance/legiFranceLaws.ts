@@ -1,12 +1,14 @@
 import { legiFrancePostRequest, searchDate } from "../../../utils/environment";
 import { LegiFranceBase } from "./legiFrance";
-import { legiFranceCodeOrLawRepository } from "./legiFranceArticleRepository";
 import {
-	type LegiFranceCodeArticleOnline,
+	type LegiFranceCode,
+	legiFranceArticleRepository,
+	legiFranceCodeOrLawRepository,
+} from "./legiFranceArticleRepository";
+import {
 	type LegiFranceLawArticleOnline,
 	LegiFranceLawEnumerationResult,
 	type LegiFranceLawOnline,
-	type LegiFranceLawSectionOnline,
 } from "./legiFranceTypes";
 
 export class LegiFranceLaws extends LegiFranceBase {
@@ -33,6 +35,52 @@ export class LegiFranceLaws extends LegiFranceBase {
 				error instanceof Error ? error.message : String(error);
 			throw error;
 		}
+	}
+
+	async addLawsFromSqlToQdrant(): Promise<void> {
+		this.abortController.reset();
+
+		// Implementation for adding laws from SQL to Qdrant
+		await this.prepareDatabases();
+
+		const laws = await legiFranceCodeOrLawRepository.readAllLaws();
+		let index = 0;
+		for (const law of laws) {
+			console.info(
+				`Law ${index + 1} / ${laws.length} : ${law.title} (${law.id})`,
+			);
+			index++;
+
+			const articles = await legiFranceArticleRepository.readAllByCodeId(
+				law.id,
+			);
+
+			for (const article of articles) {
+				console.log(`\tArticle ${article.number}`);
+				this.insertArticle(
+					{
+						id: article.id,
+						num: article.number,
+						texte: article.text,
+						etat: article.state,
+						dateDebut: article.startDate
+							? article.startDate.getTime()
+							: Date.now(),
+						dateFin: article.endDate
+							? article.endDate.getTime()
+							: new Date(2999, 0, 1, 0, 0, 0, 0).getTime(),
+						dateVersion: article.startDate
+							? article.startDate.toISOString()
+							: new Date().toISOString(),
+					},
+					law.id,
+					law.title,
+				);
+			}
+		}
+
+		legiFranceCodeOrLawRepository.disconnect();
+		legiFranceArticleRepository.disconnect();
 	}
 
 	private async enumerateLaws(): Promise<LegiFranceLawEnumerationResult> {
@@ -97,18 +145,23 @@ export class LegiFranceLaws extends LegiFranceBase {
 					continue;
 				}
 
-				let lawInRepository = await legiFranceCodeOrLawRepository.read(law.id);
-				if (!lawInRepository) {
-					await legiFranceCodeOrLawRepository.create({
-						id: law.id,
-						title: titleShort,
-						titleFull: title,
-						state: "VIGUEUR",
-						startDate: new Date(lawFound.dateDebutVersion),
-						endDate: new Date(lawFound.dateFinVersion),
-					});
-
+				let lawInRepository: LegiFranceCode | null = null;
+				try {
 					lawInRepository = await legiFranceCodeOrLawRepository.read(law.id);
+					if (!lawInRepository) {
+						await legiFranceCodeOrLawRepository.create({
+							id: law.id,
+							title: titleShort,
+							titleFull: title,
+							state: "VIGUEUR",
+							startDate: new Date(lawFound.dateDebutVersion),
+							endDate: new Date(lawFound.dateFinVersion),
+						});
+
+						lawInRepository = await legiFranceCodeOrLawRepository.read(law.id);
+					}
+				} catch (error) {
+					console.error(`Error processing law id ${law.id}: ${error}`);
 				}
 
 				if (!lawInRepository) {
