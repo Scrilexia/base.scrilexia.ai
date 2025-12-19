@@ -247,6 +247,9 @@ export class LegiFranceLaws extends LegiFranceBase {
 					this.isValidArticleNumber(article.num),
 			)
 			.filter((article) => {
+				if (!article.num) {
+					return false;
+				}
 				const key = `${article.id}-${article.num}`;
 				if (articlesSet.has(key)) {
 					return false;
@@ -255,6 +258,9 @@ export class LegiFranceLaws extends LegiFranceBase {
 				return true;
 			})
 			.sort((a, b) => {
+				if (!a.num || !b.num) {
+					return 0;
+				}
 				const valueA = this.retrieveValueFromArticleNum(a.num);
 				const valueB = this.retrieveValueFromArticleNum(b.num);
 
