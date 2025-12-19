@@ -275,7 +275,7 @@ export class LegiFranceBase {
 							id: articleDetails.id,
 							number: articleDetails.num,
 							text: articleDetails.texte,
-							state: articleDetails.etat,
+							state: articleDetails.etat ?? "",
 							startDate: dateDebut,
 							endDate: dateFin,
 							codeId: codeOrLawId,
