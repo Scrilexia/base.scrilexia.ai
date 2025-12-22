@@ -308,24 +308,25 @@ export class LegiFranceBase {
 	protected async buildArticlesList(
 		codeId: string,
 		codeTitle: string,
+		maxInputTokens: number,
 	): Promise<string[]> {
 		const resultLines: string[] = [];
 		const articles = await legiFranceArticleRepository.readAllByCodeId(codeId);
 		for (const article of articles) {
 			let prompt = `{"messages":[{"role":"user","content":"Article ${article.number} de la ${codeTitle}"},{"role":"assistant","content":"${article.text.replaceAll(/[\"\n\`]/g, " ")}"}]}`;
-			if (prompt.length > MAX_INPUT_TOKENS) {
+			if (prompt.length > maxInputTokens) {
 				console.warn(
 					`Article ${article.number} of ${codeTitle} exceeds maximum token limit, splitting...`,
 				);
-				const parts = this.splitString(article.text, MAX_INPUT_TOKENS - 86);
+				const parts = this.splitString(article.text, maxInputTokens - 86);
 				for (let i = 0; i < parts.length; i++) {
 					const chunk = parts[i];
-					prompt = `{"messages":[{"role":"user","content":"Article ${article.number} du ${codeTitle} (${
+
+					prompt = `{"messages":[{"role":"user","content":"Article ${article.number} (${
 						i + 1
-					})"},{"role":"assistant","content":"${chunk.replaceAll(
-						"\n",
-						" ",
-					)}"}]}`;
+					}) du ${codeTitle}"},{"role":"assistant","content":"${chunk
+						.replaceAll("\n", " ")
+						.replaceAll(/[\u0100-\uFFFF]/g, "_")}"}]}`;
 					resultLines.push(prompt);
 				}
 			} else {

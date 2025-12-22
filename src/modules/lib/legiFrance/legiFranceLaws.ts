@@ -11,6 +11,8 @@ import {
 	type LegiFranceLawOnline,
 } from "./legiFranceTypes";
 
+const MAX_INPUT_TOKENS = 65535;
+
 export class LegiFranceLaws extends LegiFranceBase {
 	async addLaws(): Promise<void> {
 		this.abortController.reset();
@@ -96,7 +98,13 @@ export class LegiFranceLaws extends LegiFranceBase {
 				`Law ${index + 1} / ${codes.length} : ${code.title} (${code.id})`,
 			);
 			index++;
-			resultLines.push(...(await this.buildArticlesList(code.id, code.title)));
+			resultLines.push(
+				...(await this.buildArticlesList(
+					code.id,
+					code.title,
+					MAX_INPUT_TOKENS,
+				)),
+			);
 		}
 
 		const max = Math.max(...resultLines.map((line) => line.length));
@@ -279,7 +287,7 @@ export class LegiFranceLaws extends LegiFranceBase {
 					this.isValidArticleNumber(article.num),
 			)
 			.filter((article) => {
-				if (!article.num) {
+				if (!article?.num) {
 					return false;
 				}
 				const key = `${article.id}-${article.num}`;
@@ -290,7 +298,7 @@ export class LegiFranceLaws extends LegiFranceBase {
 				return true;
 			})
 			.sort((a, b) => {
-				if (!a.num || !b.num) {
+				if (!a?.num || !b?.num) {
 					return 0;
 				}
 				const valueA = this.retrieveValueFromArticleNum(a.num);
@@ -301,7 +309,7 @@ export class LegiFranceLaws extends LegiFranceBase {
 
 		const notNumberedArticles = filteredArticles.filter(
 			(article) =>
-				!article.num ||
+				!article?.num ||
 				article.num === "" ||
 				!this.isValidArticleNumber(article.num),
 		);

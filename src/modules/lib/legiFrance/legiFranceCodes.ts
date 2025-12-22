@@ -128,7 +128,13 @@ export class LegiFranceCodes extends LegiFranceBase {
 			if (!this.codes.includes(code.title)) {
 				continue;
 			}
-			resultLines.push(...(await this.buildArticlesList(code.id, code.title)));
+			resultLines.push(
+				...(await this.buildArticlesList(
+					code.id,
+					code.title,
+					MAX_INPUT_TOKENS,
+				)),
+			);
 		}
 
 		const max = Math.max(...resultLines.map((line) => line.length));
@@ -217,11 +223,18 @@ export class LegiFranceCodes extends LegiFranceBase {
 			const sortedCollectedArticlesIds: LegiFranceCodeArticleOnline[] = [];
 			const articlesSet: Set<string> = new Set();
 
+			const filteredArticles = collectedArticles.filter((article) => {
+				if (!article) {
+					return false;
+				}
+				return true;
+			});
+
 			sortedCollectedArticlesIds.push(
-				...collectedArticles
+				...filteredArticles
 					.filter(
 						(article) =>
-							article.num &&
+							article?.num &&
 							article.num !== "" &&
 							this.isValidArticleNumber(article.num),
 					)
@@ -240,6 +253,7 @@ export class LegiFranceCodes extends LegiFranceBase {
 						return valueA - valueB;
 					}),
 			);
+
 			sortedCollectedArticlesIds.push(
 				...collectedArticles.filter(
 					(article) =>
