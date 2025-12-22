@@ -110,3 +110,29 @@ export const legiFranceArticlesAndLawsImportAbort: RequestHandler = async (
 	legiFranceAddArticlesAndLawsAbortController.controller.abort();
 	res.status(200).send("OK");
 };
+
+export const legiFranceBuildTrainingDataset: RequestHandler = async (
+	req,
+	res,
+	next,
+) => {
+	legiFranceAddArticlesAbortController.reset();
+	const legiFrance = new LegiFranceCodes(
+		req.body.codes,
+		legiFranceAddArticlesAbortController,
+		legiFranceStorageTarget.SQL,
+	);
+	const result = await legiFrance.buildTrainingDataset();
+	res.status(200).contentType("application/jsonl").send(result);
+};
+
+export const legiFranceArticlesAndLawsBuildTrainingDataset: RequestHandler =
+	async (req, res, next) => {
+		legiFranceAddArticlesAndLawsAbortController.reset();
+		const legiFrance = new LegiFranceLaws(
+			legiFranceAddArticlesAndLawsAbortController,
+			legiFranceStorageTarget.SQL,
+		);
+		const result = await legiFrance.buildTrainingDataset();
+		res.status(200).contentType("application/jsonl").send(result);
+	};

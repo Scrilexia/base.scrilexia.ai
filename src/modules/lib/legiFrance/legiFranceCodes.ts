@@ -1,3 +1,4 @@
+import { P } from "ollama/dist/shared/ollama.1bfa89da.cjs";
 import type { Abort } from "../../../utils/abortController";
 import vectorManager from "../../vector/vectorManager";
 import { LegiFranceBase } from "./legiFrance";
@@ -12,6 +13,8 @@ import {
 	type LegiFranceCodeOnline,
 	legiFranceStorageTarget,
 } from "./legiFranceTypes";
+
+const MAX_INPUT_TOKENS = 2 * 1024 * 1024;
 
 export class LegiFranceCodes extends LegiFranceBase {
 	#codes: string[] = [];
@@ -116,6 +119,25 @@ export class LegiFranceCodes extends LegiFranceBase {
 
 		await legiFranceCodeOrLawRepository.disconnect();
 		await legiFranceArticleRepository.disconnect();
+	}
+
+	async buildTrainingDataset(): Promise<string> {
+		const codes = await legiFranceCodeOrLawRepository.readAll();
+		const resultLines: string[] = [];
+
+		for (const code of codes) {
+			if (!this.codes.includes(code.title)) {
+				continue;
+			}
+			resultLines.push(...(await this.buildArticlesList(code.id, code.title)));
+		}
+
+		const max = Math.max(...resultLines.map((line) => line.length));
+		console.log(`Max prompt length: ${max} characters`);
+		await legiFranceCodeOrLawRepository.disconnect();
+		await legiFranceArticleRepository.disconnect();
+
+		return resultLines.join("\n");
 	}
 
 	private async searchCodes(
@@ -255,6 +277,7 @@ export class LegiFranceCodes extends LegiFranceBase {
 			await this.insertArticle(articleDetails, codeId, codeTitle);
 
 			if (this.abortController.controller.signal.aborted) {
+				console.log("Import of articles into database aborted.");
 				break;
 			}
 		}

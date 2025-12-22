@@ -15,6 +15,7 @@ import type { Collection } from "../../vector/collection";
 import vectorManager from "../../vector/vectorManager";
 import {
 	legiFranceArticleRepository,
+	LegiFranceCode,
 	legiFranceCodeOrLawRepository,
 } from "./legiFranceArticleRepository";
 import {
@@ -29,6 +30,8 @@ import type { Abort } from "../../../utils/abortController";
 import { Vector } from "../../vector/vectorUtils";
 import type { EmbeddingInterface } from "../embedding/embeddingBase";
 import { EmbeddingProviders, createEmbedding } from "../embedding/provider";
+
+const MAX_INPUT_TOKENS = 2 * 1024 * 1024;
 
 export class LegiFranceBase {
 	protected hfToken: string | null = null;
@@ -302,5 +305,43 @@ export class LegiFranceBase {
 				);
 			}
 		}
+	}
+
+	protected async buildArticlesList(
+		codeId: string,
+		codeTitle: string,
+	): Promise<string[]> {
+		const resultLines: string[] = [];
+		const articles = await legiFranceArticleRepository.readAllByCodeId(codeId);
+		for (const article of articles) {
+			let prompt = `{"messages":[{"role":"user","content":"Article ${article.number} de la ${codeTitle}"},{"role":"assistant","content":"${article.text.replaceAll(/[\"\n\`]/g, " ")}"}]}`;
+			if (prompt.length > MAX_INPUT_TOKENS) {
+				console.warn(
+					`Article ${article.number} of ${codeTitle} exceeds maximum token limit, splitting...`,
+				);
+				const parts = this.splitString(article.text, MAX_INPUT_TOKENS - 86);
+				for (let i = 0; i < parts.length; i++) {
+					const chunk = parts[i];
+					prompt = `{"messages":[{"role":"user","content":"Article ${article.number} du ${codeTitle} (${
+						i + 1
+					})"},{"role":"assistant","content":"${chunk.replaceAll(
+						"\n",
+						" ",
+					)}"}]}`;
+					resultLines.push(prompt);
+				}
+			} else {
+				resultLines.push(prompt);
+			}
+		}
+		return resultLines;
+	}
+
+	protected splitString(text: string, maxLen: number): string[] {
+		const parts = [];
+		for (let i = 0; i < text.length; i += maxLen) {
+			parts.push(text.slice(i, i + maxLen));
+		}
+		return parts;
 	}
 }

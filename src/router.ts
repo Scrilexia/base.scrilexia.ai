@@ -1,11 +1,13 @@
 import express from "express";
 import {
+	legiFranceArticlesAndLawsBuildTrainingDataset,
 	legiFranceArticlesAndLawsImportAbort,
 	legiFranceArticlesAndLawsImportQdrant,
 	legiFranceArticlesAndLawsImportSql,
 	legiFranceArticlesImportAbort,
 	legiFranceArticlesImportQdrant,
 	legiFranceArticlesImportSql,
+	legiFranceBuildTrainingDataset,
 	legiFranceResetArticlesQdrant,
 	legiFranceResetArticlesSql,
 } from "./modules/lib/legiFrance/legiFranceActions";
@@ -30,10 +32,12 @@ router.post("/api/articles/sql/reset", legiFranceResetArticlesSql);
 router.post("/api/articles/vector", legiFranceArticlesImportQdrant);
 router.post("/api/articles/vector/reset", legiFranceResetArticlesQdrant);
 router.post("/api/articles/abort", legiFranceArticlesImportAbort);
+router.post("/api/articles/train", legiFranceBuildTrainingDataset);
 
 router.post("/api/laws/sql", legiFranceArticlesAndLawsImportSql);
 router.post("/api/laws/vector", legiFranceArticlesAndLawsImportQdrant);
 router.post("/api/laws/abort", legiFranceArticlesAndLawsImportAbort);
+router.post("/api/laws/train", legiFranceArticlesAndLawsBuildTrainingDataset);
 
 router.post("/api/decisions/vector", judilibreDecisionsImportVector);
 router.post("/api/decisions/vector/reset", judilibreDecisionsImportVectorReset);

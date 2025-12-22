@@ -83,6 +83,25 @@ export class LegiFranceLaws extends LegiFranceBase {
 		legiFranceArticleRepository.disconnect();
 	}
 
+	async buildTrainingDataset(): Promise<string> {
+		const codes = await legiFranceCodeOrLawRepository.readAllLaws();
+		const resultLines: string[] = [];
+
+		for (const code of codes) {
+			const articles = await legiFranceArticleRepository.readAllByCodeId(
+				code.id,
+			);
+			resultLines.push(...(await this.buildArticlesList(code.id, code.title)));
+		}
+
+		const max = Math.max(...resultLines.map((line) => line.length));
+		console.log(`Max prompt length: ${max} characters`);
+		await legiFranceCodeOrLawRepository.disconnect();
+		await legiFranceArticleRepository.disconnect();
+
+		return resultLines.join("\n");
+	}
+
 	private async enumerateLaws(): Promise<LegiFranceLawEnumerationResult> {
 		const body = {
 			sort: "PUBLICATION_DATE_DESC",
@@ -194,6 +213,7 @@ export class LegiFranceLaws extends LegiFranceBase {
 				);
 
 				if (this.abortController.controller.signal.aborted) {
+					console.log("Import of articles and laws into database aborted.");
 					break;
 				}
 			}
@@ -239,10 +259,17 @@ export class LegiFranceLaws extends LegiFranceBase {
 
 		const articlesSet: Set<string> = new Set();
 
-		const numberedArticles = articles
+		const filteredArticles = articles.filter((article) => {
+			if (!article) {
+				return false;
+			}
+			return true;
+		});
+
+		const numberedArticles = filteredArticles
 			.filter(
 				(article) =>
-					article.num &&
+					article?.num &&
 					article.num !== "" &&
 					this.isValidArticleNumber(article.num),
 			)
@@ -267,7 +294,7 @@ export class LegiFranceLaws extends LegiFranceBase {
 				return valueA - valueB;
 			});
 
-		const notNumberedArticles = articles.filter(
+		const notNumberedArticles = filteredArticles.filter(
 			(article) =>
 				!article.num ||
 				article.num === "" ||
