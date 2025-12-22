@@ -97,7 +97,9 @@ class LegiFranceCodeOrLawRepository extends BaseRepository {
 	async readAll(): Promise<LegiFranceCode[]> {
 		this.connect();
 
-		const [rows] = await this.client.query<Rows>("SELECT * FROM lf_code_law");
+		const [rows] = await this.client.query<Rows>(
+			"SELECT * FROM lf_code_law ORDER BY start_date DESC",
+		);
 		return rows.map((row) => ({
 			id: row.id,
 			title: row.title,
@@ -112,7 +114,7 @@ class LegiFranceCodeOrLawRepository extends BaseRepository {
 		this.connect();
 
 		const [rows] = await this.client.query<Rows>(
-			"SELECT * FROM lf_code_law WHERE title LIKE 'LOI n° %'",
+			"SELECT * FROM lf_code_law WHERE title LIKE 'LOI n° %' ORDER BY start_date DESC",
 		);
 		return rows.map((row) => ({
 			id: row.id,
