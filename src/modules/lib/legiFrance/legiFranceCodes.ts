@@ -1,4 +1,3 @@
-import { P } from "ollama/dist/shared/ollama.1bfa89da.cjs";
 import type { Abort } from "../../../utils/abortController";
 import vectorManager from "../../vector/vectorManager";
 import { LegiFranceBase } from "./legiFrance";

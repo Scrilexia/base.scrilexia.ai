@@ -15,7 +15,6 @@ import type { Collection } from "../../vector/collection";
 import vectorManager from "../../vector/vectorManager";
 import {
 	legiFranceArticleRepository,
-	LegiFranceCode,
 	legiFranceCodeOrLawRepository,
 } from "./legiFranceArticleRepository";
 import {
@@ -27,7 +26,6 @@ import {
 
 import { CHUNK_SIZE } from "../../../types/constants";
 import type { Abort } from "../../../utils/abortController";
-import { Vector } from "../../vector/vectorUtils";
 import type { EmbeddingInterface } from "../embedding/embeddingBase";
 import { EmbeddingProviders, createEmbedding } from "../embedding/provider";
 
