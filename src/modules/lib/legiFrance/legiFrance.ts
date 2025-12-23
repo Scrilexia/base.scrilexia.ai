@@ -308,7 +308,6 @@ export class LegiFranceBase {
 	protected async buildArticlesList(
 		codeId: string,
 		codeTitle: string,
-		maxInputTokens: number,
 	): Promise<string[]> {
 		const resultLines: string[] = [];
 		const invisibleCharsRegex =
@@ -358,15 +357,7 @@ export class LegiFranceBase {
 				}
 			}
 
-			let prompt = `{"messages":[{"role":"user","content":"${numberAndTitle}"},{"role":"assistant","content":"${text}"}]}`;
-
-			if (prompt.length > maxInputTokens) {
-				console.warn(
-					`Article ${article.number} of ${codeTitle} exceeds maximum token limit, splitting...`,
-				);
-				continue;
-			}
-			
+			const prompt = `{"messages":[{"role":"user","content":"${numberAndTitle}"},{"role":"assistant","content":"${text}"}]}`;
 			resultLines.push(prompt);
 		}
 		return resultLines;

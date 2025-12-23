@@ -102,7 +102,6 @@ export class LegiFranceLaws extends LegiFranceBase {
 				...(await this.buildArticlesList(
 					code.id,
 					code.title,
-					MAX_INPUT_TOKENS,
 				)),
 			);
 		}
