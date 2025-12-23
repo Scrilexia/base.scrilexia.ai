@@ -314,34 +314,42 @@ export class LegiFranceBase {
 		const invisibleCharsRegex =
 			// biome-ignore lint/suspicious/noMisleadingCharacterClass: <explanation>
 			// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-			/[\x00-\x1F\x7F\u200B\u200C\u200D\u200E\u200F\u202A-\u202E\u2060\uFEFF]/g;
+			/[\u0000-\u001F\u007F\u200B\u200C\u200D\u200E\u200F\u202A-\u202E\u2060\uFEFF]/g;
 
 		const articles = await legiFranceArticleRepository.readAllByCodeId(codeId);
 		for (const article of articles) {
-			let prompt = `{"messages":[{"role":"user","content":"Article ${article.number} de la ${codeTitle}"},{"role":"assistant","content":"${
-				article.text
-			}"}]}`;
-			const match = prompt.match(invisibleCharsRegex);
-			if (match) {
-				prompt = prompt.replaceAll(invisibleCharsRegex, "");
+			let text = article.text;
+			const matchInvisibleChars = invisibleCharsRegex.exec(text);
+			if (matchInvisibleChars) {
+				console.warn(
+					`Invisible characters found in article ${article.number} of ${codeTitle}: ${matchInvisibleChars
+						.map((c) => c.charCodeAt(0).toString(16))
+						.join(", ")}`,
+				);
+				text = text.replaceAll(invisibleCharsRegex, "");
+				const match = invisibleCharsRegex.exec(text);
+				if (match) {
+					console.error(
+						`Failed to remove invisible characters from article ${article.number} of ${codeTitle}`,
+					);
+				}
 			}
+
+			let prompt = `{"messages":[{"role":"user","content":"Article ${article.number} de la ${codeTitle}"},{"role":"assistant","content":"${
+				text
+			}"}]}`;
 
 			if (prompt.length > maxInputTokens) {
 				console.warn(
 					`Article ${article.number} of ${codeTitle} exceeds maximum token limit, splitting...`,
 				);
-				const parts = this.splitString(article.text, maxInputTokens - 86);
+				const parts = this.splitString(text, maxInputTokens - 86);
 				for (let i = 0; i < parts.length; i++) {
 					const chunk = parts[i];
 
 					prompt = `{"messages":[{"role":"user","content":"Article ${article.number} (${
 						i + 1
 					}) du ${codeTitle}"},{"role":"assistant","content":"${chunk}"}]}`;
-
-					const match = prompt.match(invisibleCharsRegex);
-					if (match) {
-						prompt = prompt.replaceAll(invisibleCharsRegex, "");
-					}
 
 					resultLines.push(prompt);
 				}
