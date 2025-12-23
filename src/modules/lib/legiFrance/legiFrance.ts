@@ -311,9 +311,16 @@ export class LegiFranceBase {
 		maxInputTokens: number,
 	): Promise<string[]> {
 		const resultLines: string[] = [];
+		const invisibleCharsRegex =
+			// biome-ignore lint/suspicious/noMisleadingCharacterClass: <explanation>
+			// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
+			/[\x00-\x1F\x7F\u200B\u200C\u200D\u200E\u200F\u202A-\u202E\u2060\uFEFF]/g;
+
 		const articles = await legiFranceArticleRepository.readAllByCodeId(codeId);
 		for (const article of articles) {
-			let prompt = `{"messages":[{"role":"user","content":"Article ${article.number} de la ${codeTitle}"},{"role":"assistant","content":"${article.text.replaceAll(/[\"\n\`]/g, " ")}"}]}`;
+			let prompt = `{"messages":[{"role":"user","content":"Article ${article.number} de la ${codeTitle}"},{"role":"assistant","content":"${article.text
+				.replaceAll("\n", " ")
+				.replaceAll(invisibleCharsRegex, "")}"}]}`;
 			if (prompt.length > maxInputTokens) {
 				console.warn(
 					`Article ${article.number} of ${codeTitle} exceeds maximum token limit, splitting...`,
@@ -326,7 +333,7 @@ export class LegiFranceBase {
 						i + 1
 					}) du ${codeTitle}"},{"role":"assistant","content":"${chunk
 						.replaceAll("\n", " ")
-						.replaceAll(/[\u0100-\uFFFF]/g, "_")}"}]}`;
+						.replaceAll(invisibleCharsRegex, "")}"}]}`;
 					resultLines.push(prompt);
 				}
 			} else {
