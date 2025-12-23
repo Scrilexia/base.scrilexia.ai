@@ -11,7 +11,7 @@ import {
 	type LegiFranceLawOnline,
 } from "./legiFranceTypes";
 
-const MAX_INPUT_TOKENS = 2 * 1024 * 1024;
+const MAX_INPUT_TOKENS = 512 * 1024;
 
 export class LegiFranceLaws extends LegiFranceBase {
 	async addLaws(): Promise<void> {

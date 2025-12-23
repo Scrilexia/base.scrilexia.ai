@@ -353,19 +353,10 @@ export class LegiFranceBase {
 				console.warn(
 					`Article ${article.number} of ${codeTitle} exceeds maximum token limit, splitting...`,
 				);
-				const parts = this.splitString(text, maxInputTokens - 86);
-				for (let i = 0; i < parts.length; i++) {
-					const chunk = parts[i];
-
-					prompt = `{"messages":[{"role":"user","content":"Article ${article.number} (${
-						i + 1
-					}) du ${codeTitle}"},{"role":"assistant","content":"${chunk}"}]}`;
-
-					resultLines.push(prompt);
-				}
-			} else {
-				resultLines.push(prompt);
+				continue;
 			}
+			
+			resultLines.push(prompt);
 		}
 		return resultLines;
 	}
