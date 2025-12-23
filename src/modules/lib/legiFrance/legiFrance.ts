@@ -318,7 +318,14 @@ export class LegiFranceBase {
 
 		const articles = await legiFranceArticleRepository.readAllByCodeId(codeId);
 		for (const article of articles) {
-			let text = article.text;
+			let text = article.text
+				.replace(/(?<!\\)(["\\])/g, "\\$&")
+				.replace(/(?<!\\)\n/g, "\\n")
+				.replace(/(?<!\\)\r/g, "\\r")
+				.replace(/(?<!\\)\t/g, "\\t")
+				.replace(/(?<!\\)\b/g, "")
+				.replace(/(?<!\\)\f/g, "\\f");
+
 			const matchInvisibleChars = invisibleCharsRegex.exec(text);
 			if (matchInvisibleChars) {
 				console.warn(
