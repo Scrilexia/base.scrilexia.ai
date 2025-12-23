@@ -316,7 +316,11 @@ export class LegiFranceLaws extends LegiFranceBase {
 
 		for (const article of numberedArticles) {
 			const articleDetails = await this.searchArticleById(article.id);
-			articleDetails.num = articleDetails.num ?? article.num ?? "";
+			if (!articleDetails) {
+				console.warn(`Article with ID ${article.id} not found.`);
+				continue;
+			}
+			articleDetails.num = articleDetails?.num ?? article.num ?? "";
 			console.log(`\tArticle ${articleDetails.num}`);
 			await this.insertArticle(articleDetails, lawId, lawTitle);
 
@@ -331,7 +335,11 @@ export class LegiFranceLaws extends LegiFranceBase {
 
 		for (const [index, article] of notNumberedArticles.entries()) {
 			const articleDetails = await this.searchArticleById(article.id);
-			articleDetails.num = articleDetails.num ?? `Annexe ${index + 1}`;
+			if (!articleDetails) {
+				console.warn(`Article with ID ${article.id} not found.`);
+				continue;
+			}
+			articleDetails.num = articleDetails?.num ?? `Annexe ${index + 1}`;
 			console.log(`\tArticle ${articleDetails.num}`);
 			await this.insertArticle(articleDetails, lawId, lawTitle);
 
