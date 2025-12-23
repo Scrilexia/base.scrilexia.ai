@@ -328,6 +328,8 @@ export class LegiFranceBase {
 				.replace(/\u000B/g, "")
 				.replace(/\u000C/g, "")
 				.replace(/\u000D/g, "")
+				.replaceAll("\"", "ˮ")
+				.replaceAll("'", "ʹ")
 
 			const matchInvisibleChars = invisibleCharsRegex.exec(text);
 			if (matchInvisibleChars) {
