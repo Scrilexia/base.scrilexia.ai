@@ -330,6 +330,17 @@ export class LegiFranceBase {
 				.replace(/\u000D/g, "")
 				.replaceAll("\"", "ˮ")
 				.replaceAll("'", "ʹ")
+			const numberAndTitle = `Article ${article.number} de la ${codeTitle}`
+				.replace(/\u0000/g, "")
+				.replace(/\u0007/g, "")
+				.replace(/\u0008/g, "")
+				.replace(/\u0009/g, "")
+				.replace(/\u000A/g, "")
+				.replace(/\u000B/g, "")
+				.replace(/\u000C/g, "")
+				.replace(/\u000D/g, "")
+				.replaceAll("\"", "ˮ")
+				.replaceAll("'", "ʹ");
 
 			const matchInvisibleChars = invisibleCharsRegex.exec(text);
 			if (matchInvisibleChars) {
@@ -347,9 +358,7 @@ export class LegiFranceBase {
 				}
 			}
 
-			let prompt = `{"messages":[{"role":"user","content":"Article ${article.number} de la ${codeTitle}"},{"role":"assistant","content":"${
-				text
-			}"}]}`;
+			let prompt = `{"messages":[{"role":"user","content":"${numberAndTitle}"},{"role":"assistant","content":"${text}"}]}`;
 
 			if (prompt.length > maxInputTokens) {
 				console.warn(
