@@ -319,12 +319,15 @@ export class LegiFranceBase {
 		const articles = await legiFranceArticleRepository.readAllByCodeId(codeId);
 		for (const article of articles) {
 			let text = article.text
-				.replace(/(?<!\\)(["\\])/g, "\\$&")
-				.replace(/(?<!\\)\n/g, "\\n")
-				.replace(/(?<!\\)\r/g, "\\r")
-				.replace(/(?<!\\)\t/g, "\\t")
-				.replace(/(?<!\\)\b/g, "")
-				.replace(/(?<!\\)\f/g, "\\f");
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
+				.replace(/\u0000/g, "")
+				.replace(/\u0007/g, "")
+				.replace(/\u0008/g, "")
+				.replace(/\u0009/g, "")
+				.replace(/\u000A/g, "")
+				.replace(/\u000B/g, "")
+				.replace(/\u000C/g, "")
+				.replace(/\u000D/g, "")
 
 			const matchInvisibleChars = invisibleCharsRegex.exec(text);
 			if (matchInvisibleChars) {
