@@ -128,12 +128,7 @@ export class LegiFranceCodes extends LegiFranceBase {
 			if (!this.codes.includes(code.title)) {
 				continue;
 			}
-			resultLines.push(
-				...(await this.buildArticlesList(
-					code.id,
-					code.title,
-				)),
-			);
+			resultLines.push(...(await this.buildArticlesList(code.id, code.title)));
 		}
 
 		const max = Math.max(...resultLines.map((line) => line.length));

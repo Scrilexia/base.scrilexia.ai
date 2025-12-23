@@ -13,6 +13,7 @@ import {
 } from "./modules/lib/legiFrance/legiFranceActions";
 
 import {
+	judilibreDecisionsBuildTrainingDatasetThemesAndDecisions,
 	judilibreDecisionsImportAbort,
 	judilibreDecisionsImportSql,
 	judilibreDecisionsImportSqlReset,
@@ -44,5 +45,9 @@ router.post("/api/decisions/vector/reset", judilibreDecisionsImportVectorReset);
 router.post("/api/decisions/sql", judilibreDecisionsImportSql);
 router.post("/api/decisions/sql/reset", judilibreDecisionsImportSqlReset);
 router.post("/api/decisions/abort", judilibreDecisionsImportAbort);
+router.post(
+	"/api/decisions/train/themes",
+	judilibreDecisionsBuildTrainingDatasetThemesAndDecisions,
+);
 
 export { router };

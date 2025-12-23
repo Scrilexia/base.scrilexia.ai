@@ -148,12 +148,56 @@ export class JudilibreRepository extends BaseRepository {
 		}));
 	}
 
+	async readByThemesVisasAndSummary(
+		offset: number,
+		size: number,
+	): Promise<JudilibreDecision[]> {
+		this.connect();
+
+		const [rows] = await this.client.query<Rows>(
+			`SELECT id, jurisdiction, location, chamber, number, decision_date, type, text, motivations, solution, summary, themes, visas 
+			 FROM jdl_decision_${this.jurisdiction} 
+			 WHERE JSON_LENGTH(themes) > 0 AND JSON_LENGTH(visas) > 0 AND summary IS NOT NULL AND summary <> ""
+			 ORDER BY decision_date DESC
+			 LIMIT ? OFFSET ?`,
+			[size, offset],
+		);
+
+		return rows.map((row) => ({
+			id: row.id,
+			jurisdiction: row.jurisdiction,
+			location: row.location,
+			chamber: row.chamber,
+			number: row.number,
+			decisionDate: row.decision_date,
+			type: row.type,
+			text: row.text,
+			motivations: row.motivations,
+			solution: row.solution,
+			summary: row.summary,
+			themes: row.themes,
+			visas: row.visas,
+		}));
+	}
+
 	// count
 	async count(): Promise<number> {
 		this.connect();
 
 		const [rows] = await this.client.query<Rows>(
 			`SELECT COUNT(*) as count FROM jdl_decision_${this.jurisdiction}`,
+		);
+
+		return rows[0].count;
+	}
+
+	async countForThemesVisasAndSummary(): Promise<number> {
+		this.connect();
+
+		const [rows] = await this.client.query<Rows>(
+			`SELECT COUNT(*) as count 
+			 FROM jdl_decision_${this.jurisdiction} 
+			 WHERE (JSON_LENGTH(themes) > 0 AND JSON_LENGTH(visas) > 0 AND summary IS NOT NULL AND summary != '')`,
 		);
 
 		return rows[0].count;

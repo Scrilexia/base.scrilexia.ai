@@ -34,14 +34,32 @@ type addEmbedding = (
 	zone: string,
 	sentence: string,
 ) => Promise<void>;
+export class JudilibreDecisionsBase {
+	protected jurisdiction: Jurisdiction;
+	protected judilibreRepository: JudilibreRepository;
 
-export class JudilibreDecisions {
-	#jurisdiction: Jurisdiction;
+	constructor(jurisdiction: Jurisdiction) {
+		this.jurisdiction = jurisdiction;
+		this.judilibreRepository = new JudilibreRepository(this.jurisdiction);
+	}
+
+	protected buildDate(date: string): string {
+		const dateObject = new Date(date);
+		const options: Intl.DateTimeFormatOptions = {
+			year: "numeric",
+			month: "long",
+			day: "numeric",
+		};
+
+		return new Intl.DateTimeFormat("fr-FR", options).format(dateObject);
+	}
+}
+
+export class JudilibreDecisions extends JudilibreDecisionsBase {
 	#endDate: Date;
 	private collection: Collection | null = null;
 	private abortController: Abort;
 	private oldestDecisionDate: Date;
-	private judilibreRepository: JudilibreRepository;
 	private embeddingInstance: EmbeddingInterface;
 	private startIndex = 0;
 	private maxDecisionsToImport = -1;
@@ -53,14 +71,14 @@ export class JudilibreDecisions {
 		startIndex = 0,
 		maxDecisionsToImport = -1,
 	) {
-		this.#jurisdiction = jurisdiction;
+		super(jurisdiction);
 		this.#endDate = endDate;
 		this.startIndex = startIndex;
 		this.maxDecisionsToImport = maxDecisionsToImport;
 
 		this.oldestDecisionDate = endDate;
 		this.abortController = abortController;
-		this.judilibreRepository = new JudilibreRepository(this.#jurisdiction);
+		this.judilibreRepository = new JudilibreRepository(this.jurisdiction);
 		const embeddingProviderString = getEnvValue("embedding_provider");
 		let embeddingProvider = EmbeddingProviders.Ollama;
 		if (
@@ -87,7 +105,7 @@ export class JudilibreDecisions {
 			for (blockIndex = 0; blockIndex < blocksCount; blockIndex++) {
 				const data = await this.invokeJudilibreExportation<
 					Record<string, unknown>
-				>(this.#jurisdiction, blockIndex, blockSize, this.oldestDecisionDate);
+				>(this.jurisdiction, blockIndex, blockSize, this.oldestDecisionDate);
 				if (!data) {
 					console.error(
 						"No data received from Judilibre API for block index:",
@@ -372,7 +390,7 @@ export class JudilibreDecisions {
 
 		vectorManager.size = await this.embeddingInstance.getDimension();
 
-		const collectionName = `judilibre_embeddings_${this.#jurisdiction}_${vectorManager.size}`;
+		const collectionName = `judilibre_embeddings_${this.jurisdiction}_${vectorManager.size}`;
 		if (!(await vectorManager.collectionExists(collectionName))) {
 			this.collection = await vectorManager.createCollection(collectionName);
 		} else {
@@ -525,5 +543,51 @@ export class JudilibreDecisionsSqlReset {
 	async ImportSqlReset(): Promise<void> {
 		const repository = new JudilibreRepository(this.jurisdiction);
 		await repository.deleteTable();
+	}
+}
+
+export class JudilibreDecisionsSearch extends JudilibreDecisionsBase {
+	constructor(jurisdiction: Jurisdiction) {
+		super(jurisdiction);
+		this.judilibreRepository = new JudilibreRepository(this.jurisdiction);
+	}
+
+	async buildTrainingDatasetThemesDecisions(): Promise<string> {
+		const decisionsCount =
+			(await this.judilibreRepository.countForThemesVisasAndSummary()) ?? 0;
+		const resultLines: string[] = [];
+		const uniqueThemes = new Map<string, string>();
+
+		let index = 0;
+		for (let offset = 0; offset < decisionsCount; offset += 1000) {
+			const decisions =
+				await this.judilibreRepository.readByThemesVisasAndSummary(
+					offset,
+					1000,
+				);
+			for (const decision of decisions) {
+				index++;
+				const decisionTitle = `${decision.location ?? decision.jurisdiction}${decision.chamber ? `, ${decision.chamber}` : ""} du ${this.buildDate(decision.decisionDate)} n°${decision.number}`;
+				console.info(
+					`Decision ${index} / ${decisionsCount} : ${decision.id} - ${decisionTitle}`,
+				);
+
+				const themes = decision.themes.join("|");
+				if (!uniqueThemes.has(themes)) {
+					uniqueThemes.set(themes, decisionTitle);
+				} else {
+					const decisionsIn = (uniqueThemes.get(themes) as string).split("|");
+					decisionsIn.push(decisionTitle);
+					uniqueThemes.set(themes, decisionsIn.join("|"));
+				}
+			}
+		}
+
+		for (const [themes, decisionsTitles] of uniqueThemes) {
+			const prompt = `{"messages":[{"role":"user","content":"${themes.split("|").join(", ")}"},{"role":"assistant","content":"${decisionsTitles.split("|").join("; ")}"}]}`;
+			resultLines.push(prompt);
+		}
+
+		return resultLines.join("\n");
 	}
 }

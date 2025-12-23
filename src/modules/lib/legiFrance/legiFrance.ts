@@ -320,25 +320,40 @@ export class LegiFranceBase {
 			let text = article.text
 				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
 				.replace(/\u0000/g, "")
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
 				.replace(/\u0007/g, "")
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
 				.replace(/\u0008/g, "")
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
 				.replace(/\u0009/g, "")
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
 				.replace(/\u000A/g, "")
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
 				.replace(/\u000B/g, "")
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
 				.replace(/\u000C/g, "")
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
 				.replace(/\u000D/g, "")
-				.replaceAll("\"", "ˮ")
-				.replaceAll("'", "ʹ")
+				.replaceAll('"', "ˮ")
+				.replaceAll("'", "ʹ");
 			const numberAndTitle = `Article ${article.number} de la ${codeTitle}`
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
 				.replace(/\u0000/g, "")
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
 				.replace(/\u0007/g, "")
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
 				.replace(/\u0008/g, "")
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
 				.replace(/\u0009/g, "")
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
 				.replace(/\u000A/g, "")
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
 				.replace(/\u000B/g, "")
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
 				.replace(/\u000C/g, "")
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
 				.replace(/\u000D/g, "")
-				.replaceAll("\"", "ˮ")
+				.replaceAll('"', "ˮ")
 				.replaceAll("'", "ʹ");
 
 			const matchInvisibleChars = invisibleCharsRegex.exec(text);

@@ -3,6 +3,7 @@ import { judilibreDecisionsImportationAbortController } from "../../../router";
 import {
 	JudilibreDecisions,
 	JudilibreDecisionsQdrantReset,
+	JudilibreDecisionsSearch,
 	JudilibreDecisionsSqlReset,
 } from "./judilibreDecisions";
 
@@ -68,3 +69,15 @@ export const judilibreDecisionsImportVectorReset: RequestHandler = async (
 	await legiFrance.ImportQdrantReset();
 	res.status(200).send("OK");
 };
+
+export const judilibreDecisionsBuildTrainingDatasetThemesAndDecisions: RequestHandler =
+	async (req, res, next) => {
+		judilibreDecisionsImportationAbortController.reset();
+		const judilibreDecisions = new JudilibreDecisionsSearch(
+			req.body.jurisdiction ?? "cc",
+		);
+
+		const dataset =
+			await judilibreDecisions.buildTrainingDatasetThemesDecisions();
+		res.status(200).send(dataset);
+	};
