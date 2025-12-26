@@ -582,7 +582,7 @@ export class JudilibreDecisionsSearch extends JudilibreDecisionsBase {
 				.replace(/\u000C/g, "")
 				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
 				.replace(/\u000D/g, "")
-				.replace(/\"/g, "ˮ")
+				.replace(/"/g, "ˮ")
 				.replace(/'/g, "ʹ");
 
 			const prompt = `{"messages":[{"role":"user","content":"${decisionTitle}"},{"role":"assistant","content":"${
