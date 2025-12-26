@@ -3,11 +3,14 @@ import path from "node:path";
 import process from "node:process";
 import axios, { type AxiosResponse, type AxiosRequestConfig } from "axios";
 import { TokenTextSplitter } from "langchain/text_splitter";
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 export function setCurrentDirectory() {
 	try {
 		if (!fs.existsSync(path.join(process.cwd(), ".eun.env"))) {
-			let currentDir = __dirname;
+			const filename = fileURLToPath(import.meta.url);
+			let currentDir = dirname(filename);;
 			const useBackslash = currentDir.includes("\\");
 			while (!fs.existsSync(path.join(currentDir, ".eun.env"))) {
 				currentDir = currentDir.substring(
