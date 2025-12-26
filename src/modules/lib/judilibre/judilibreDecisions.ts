@@ -565,6 +565,27 @@ export class JudilibreDecisionsSearch extends JudilibreDecisionsBase {
 			console.info(
 				`Decision ${index} / ${totalDecisions} : ${decision.id} - ${decisionTitle}`,
 			);
+			let visas =
+				decision.visas.length > 0 ? ` ${decision.visas.join(", ")}` : "";
+			visas = visas
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
+				.replace(/\u0000/g, "")
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
+				.replace(/\u0007/g, "")
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
+				.replace(/\u0008/g, "")
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
+				.replace(/\u0009/g, "")
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
+				.replace(/\u000A/g, "")
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
+				.replace(/\u000B/g, "")
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
+				.replace(/\u000C/g, "")
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
+				.replace(/\u000D/g, "")
+				.replace(/"/g, "ˮ")
+				.replace(/'/g, "ʹ");
 			const summary = decision.summary
 				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
 				.replace(/\u0000/g, "")
@@ -587,7 +608,7 @@ export class JudilibreDecisionsSearch extends JudilibreDecisionsBase {
 
 			const prompt = `{"messages":[{"role":"user","content":"${decisionTitle}"},{"role":"assistant","content":"${
 				summary
-			}${decision.visas.length > 0 ? ` ${decision.visas.join(", ")}` : ""}"}]}`;
+			}${visas}"}]}`;
 			resultLines.push(prompt);
 		}
 
