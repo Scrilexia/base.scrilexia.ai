@@ -1,4 +1,4 @@
-import { decryptAES, encryptAES } from "./cryptology";
+import { decryptAES, encryptAES } from "./cryptology.js";
 
 export function generateToken(
 	secret: string,

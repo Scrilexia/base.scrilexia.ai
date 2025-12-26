@@ -1,6 +1,9 @@
-import { trySeveralTimes } from "../../utils/environment";
-import type { QdrantResult, QdrantSearchCriteria } from "./params";
-import type { QdrantClientInterface } from "./params";
+import { trySeveralTimes } from "../../utils/environment.js";
+import type {
+	QdrantClientInterface,
+	QdrantResult,
+	QdrantSearchCriteria,
+} from "./params.js";
 
 export class Collection {
 	#client: QdrantClientInterface;

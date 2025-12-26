@@ -1,9 +1,9 @@
-import { getEnvValue } from "../../utils/environment";
+import { getEnvValue } from "../../utils/environment.js";
 import {
 	type IDatabase,
 	openConnection,
 	openDatabase,
-} from "../database/manager";
+} from "../database/manager.js";
 
 export class BaseRepository {
 	protected client: IDatabase;

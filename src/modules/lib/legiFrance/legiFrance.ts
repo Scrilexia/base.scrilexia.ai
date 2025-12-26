@@ -10,24 +10,24 @@ import {
 	splitTextWithtokens,
 	toDate,
 	trySeveralTimes,
-} from "../../../utils/environment";
-import type { Collection } from "../../vector/collection";
-import vectorManager from "../../vector/vectorManager";
+} from "../../../utils/environment.js";
+import type { Collection } from "../../vector/collection.js";
+import vectorManager from "../../vector/vectorManager.js";
 import {
 	legiFranceArticleRepository,
 	legiFranceCodeOrLawRepository,
-} from "./legiFranceArticleRepository";
+} from "./legiFranceArticleRepository.js";
 import {
 	ArticleSearchResult,
 	type LegiFranceCodeArticleOnline,
 	type LegiFranceCodeSectionOnline,
 	legiFranceStorageTarget,
-} from "./legiFranceTypes";
+} from "./legiFranceTypes.js";
 
-import { CHUNK_SIZE } from "../../../types/constants";
-import type { Abort } from "../../../utils/abortController";
-import type { EmbeddingInterface } from "../embedding/embeddingBase";
-import { EmbeddingProviders, createEmbedding } from "../embedding/provider";
+import { CHUNK_SIZE } from "../../../types/constants.js";
+import type { Abort } from "../../../utils/abortController.js";
+import type { EmbeddingInterface } from "../embedding/embeddingBase.js";
+import { EmbeddingProviders, createEmbedding } from "../embedding/provider.js";
 
 const MAX_INPUT_TOKENS = 2 * 1024 * 1024;
 

@@ -3,9 +3,9 @@ import * as https from "node:https";
 import path from "node:path";
 import bodyParser from "body-parser";
 import express from "express";
-import authActions from "./modules/auth/authActions";
-import { router } from "./router";
-import { getEnvValue, setCurrentDirectory } from "./utils/environment";
+import authActions from "./modules/auth/authActions.js";
+import { router } from "./router.js";
+import { getEnvValue, setCurrentDirectory } from "./utils/environment.js";
 
 const app = express();
 let serverApp: https.Server | undefined = undefined;

@@ -1,9 +1,9 @@
-import { app, serverApp } from "./app";
+import { app, serverApp } from "./app.js";
 import {
 	getEnvValue,
 	setCurrentDirectory,
 	setEnvValue,
-} from "./utils/environment";
+} from "./utils/environment.js";
 
 setCurrentDirectory();
 

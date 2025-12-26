@@ -1,8 +1,8 @@
-import { getEnvValue } from "../../../utils/environment";
-import type { Result, Rows } from "../../database/manager";
-import { Schema } from "../../database/schema";
-import { BaseRepository } from "../repositoryManager";
-import type { TextZoneSegment } from "./judilibreTypes";
+import { getEnvValue } from "../../../utils/environment.js";
+import type { Result, Rows } from "../../database/manager.js";
+import { Schema } from "../../database/schema.js";
+import { BaseRepository } from "../repositoryManager.js";
+import type { TextZoneSegment } from "./judilibreTypes.js";
 
 export type JudilibreDecision = {
 	id: string;

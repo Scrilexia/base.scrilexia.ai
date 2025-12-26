@@ -2,9 +2,9 @@ import {
 	type FeatureExtractionOutput,
 	InferenceClient,
 } from "@huggingface/inference";
-import { getEnvValue, trySeveralTimes } from "../../../utils/environment";
-import { Vector } from "../../vector/vectorUtils";
-import { EmbeddingBase } from "./embeddingBase";
+import { getEnvValue, trySeveralTimes } from "../../../utils/environment.js";
+import { Vector } from "../../vector/vectorUtils.js";
+import { EmbeddingBase } from "./embeddingBase.js";
 
 export class HfInferenceEmbedding extends EmbeddingBase {
 	private model: string;

@@ -1,5 +1,5 @@
 import mysql, { type QueryResult } from "mysql2/promise";
-import type { Schema } from "./schema";
+import type { Schema } from "./schema.js";
 
 export type DbClient = mysql.Pool;
 export type DbConnection = mysql.Connection;

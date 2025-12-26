@@ -1,6 +1,6 @@
-import { getEnvValue, trySeveralTimes } from "../../utils/environment";
-import { Collection } from "./collection";
-import type { QdrantClientInterface } from "./params";
+import { getEnvValue, trySeveralTimes } from "../../utils/environment.js";
+import { Collection } from "./collection.js";
+import type { QdrantClientInterface } from "./params.js";
 
 class VectorManager {
 	#client!: QdrantClientInterface;

@@ -1,17 +1,17 @@
-import type { Abort } from "../../../utils/abortController";
-import vectorManager from "../../vector/vectorManager";
-import { LegiFranceBase } from "./legiFrance";
+import type { Abort } from "../../../utils/abortController.js";
+import vectorManager from "../../vector/vectorManager.js";
+import { LegiFranceBase } from "./legiFrance.js";
 import {
 	legiFranceArticleRepository,
 	legiFranceCodeOrLawRepository,
-} from "./legiFranceArticleRepository";
+} from "./legiFranceArticleRepository.js";
 import {
 	CodeSearchResult,
 	type CodeSearchResults,
 	type LegiFranceCodeArticleOnline,
 	type LegiFranceCodeOnline,
 	legiFranceStorageTarget,
-} from "./legiFranceTypes";
+} from "./legiFranceTypes.js";
 
 const MAX_INPUT_TOKENS = 2 * 1024 * 1024;
 

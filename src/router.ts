@@ -10,17 +10,18 @@ import {
 	legiFranceBuildTrainingDataset,
 	legiFranceResetArticlesQdrant,
 	legiFranceResetArticlesSql,
-} from "./modules/lib/legiFrance/legiFranceActions";
+} from "./modules/lib/legiFrance/legiFranceActions.js";
 
 import {
+	judilibreDecisionsBuildTrainingDatasetSummariesAndDecisions,
 	judilibreDecisionsBuildTrainingDatasetThemesAndDecisions,
 	judilibreDecisionsImportAbort,
 	judilibreDecisionsImportSql,
 	judilibreDecisionsImportSqlReset,
 	judilibreDecisionsImportVector,
 	judilibreDecisionsImportVectorReset,
-} from "./modules/lib/judilibre/judilibreActions";
-import { Abort } from "./utils/abortController";
+} from "./modules/lib/judilibre/judilibreActions.js";
+import { Abort } from "./utils/abortController.js";
 
 export const legiFranceAddArticlesAbortController = new Abort();
 export const legiFranceAddArticlesAndLawsAbortController = new Abort();
@@ -48,6 +49,10 @@ router.post("/api/decisions/abort", judilibreDecisionsImportAbort);
 router.post(
 	"/api/decisions/train/themes",
 	judilibreDecisionsBuildTrainingDatasetThemesAndDecisions,
+);
+router.post(
+	"/api/decisions/train/summaries",
+	judilibreDecisionsBuildTrainingDatasetSummariesAndDecisions,
 );
 
 export { router };

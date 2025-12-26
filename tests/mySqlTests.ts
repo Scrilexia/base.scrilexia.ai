@@ -1,6 +1,9 @@
-import { openConnection, openDatabase } from "../src/modules/database/manager";
-import { Schema } from "../src/modules/database/schema";
-import { getEnvValue, setCurrentDirectory } from "../src/utils/environment";
+import {
+	openConnection,
+	openDatabase,
+} from "../src/modules/database/manager.js";
+import { Schema } from "../src/modules/database/schema.js";
+import { getEnvValue, setCurrentDirectory } from "../src/utils/environment.js";
 
 const run = async () => {
 	setCurrentDirectory();

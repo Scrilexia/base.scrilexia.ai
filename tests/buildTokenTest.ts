@@ -1,7 +1,7 @@
-import { getEnvValue } from "../src/utils/environment";
-import { generateToken } from "../src/utils/token";
+import { getEnvValue } from "../src/utils/environment.js";
+import { generateToken } from "../src/utils/token.js";
 
-(async () => {
+const buildToken = async () => {
 	const secret = getEnvValue("token_secret");
 	if (!secret) {
 		throw new Error("Environment variable 'token_secret' is not set");
@@ -14,4 +14,6 @@ import { generateToken } from "../src/utils/token";
 
 	const token = generateToken(secret, password, 60 * 60 * 1000); // 1 hour expiration
 	console.log("Generated Token:", token);
-})();
+};
+
+await buildToken();

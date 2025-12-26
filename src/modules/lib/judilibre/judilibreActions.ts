@@ -1,11 +1,11 @@
 import type { RequestHandler } from "express";
-import { judilibreDecisionsImportationAbortController } from "../../../router";
+import { judilibreDecisionsImportationAbortController } from "../../../router.js";
 import {
 	JudilibreDecisions,
 	JudilibreDecisionsQdrantReset,
 	JudilibreDecisionsSearch,
 	JudilibreDecisionsSqlReset,
-} from "./judilibreDecisions";
+} from "./judilibreDecisions.js";
 
 export const judilibreDecisionsImportVector: RequestHandler = async (
 	req,
@@ -79,5 +79,17 @@ export const judilibreDecisionsBuildTrainingDatasetThemesAndDecisions: RequestHa
 
 		const dataset =
 			await judilibreDecisions.buildTrainingDatasetThemesDecisions();
+		res.status(200).send(dataset);
+	};
+
+export const judilibreDecisionsBuildTrainingDatasetSummariesAndDecisions: RequestHandler =
+	async (req, res, next) => {
+		judilibreDecisionsImportationAbortController.reset();
+		const judilibreDecisions = new JudilibreDecisionsSearch(
+			req.body.jurisdiction ?? "cc",
+		);
+
+		const dataset =
+			await judilibreDecisions.buildTrainingDatasetSummariesDecisions();
 		res.status(200).send(dataset);
 	};

@@ -1,5 +1,5 @@
-import { HfInferenceEmbedding } from "./hfInferenceEmbedding";
-import { OllamaEmbedding } from "./ollamaEmbedding";
+import { HfInferenceEmbedding } from "./hfInferenceEmbedding.js";
+import { OllamaEmbedding } from "./ollamaEmbedding.js";
 
 export enum EmbeddingProviders {
 	HuggingFaceInference = "hugging_face_inference",

@@ -2,10 +2,10 @@ import type { RequestHandler } from "express";
 import {
 	legiFranceAddArticlesAbortController,
 	legiFranceAddArticlesAndLawsAbortController,
-} from "../../../router";
-import { LegiFranceCodes, LegiFranceCodesReset } from "./legiFranceCodes";
-import { LegiFranceLaws } from "./legiFranceLaws";
-import { legiFranceStorageTarget } from "./legiFranceTypes";
+} from "../../../router.js";
+import { LegiFranceCodes, LegiFranceCodesReset } from "./legiFranceCodes.js";
+import { LegiFranceLaws } from "./legiFranceLaws.js";
+import { legiFranceStorageTarget } from "./legiFranceTypes.js";
 
 export const legiFranceArticlesImportSql: RequestHandler = async (
 	req,

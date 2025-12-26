@@ -1,15 +1,18 @@
-import { legiFrancePostRequest, searchDate } from "../../../utils/environment";
-import { LegiFranceBase } from "./legiFrance";
+import {
+	legiFrancePostRequest,
+	searchDate,
+} from "../../../utils/environment.js";
+import { LegiFranceBase } from "./legiFrance.js";
 import {
 	type LegiFranceCode,
 	legiFranceArticleRepository,
 	legiFranceCodeOrLawRepository,
-} from "./legiFranceArticleRepository";
+} from "./legiFranceArticleRepository.js";
 import {
 	type LegiFranceLawArticleOnline,
 	LegiFranceLawEnumerationResult,
 	type LegiFranceLawOnline,
-} from "./legiFranceTypes";
+} from "./legiFranceTypes.js";
 
 const MAX_INPUT_TOKENS = 512 * 1024;
 

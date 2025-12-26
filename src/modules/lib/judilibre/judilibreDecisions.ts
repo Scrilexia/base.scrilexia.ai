@@ -3,8 +3,8 @@ import {
 	CHUNK_SIZE,
 	DECISIONS_BLOCKS_COUNT,
 	DECISIONS_BLOCK_SIZE,
-} from "../../../types/constants";
-import type { Abort } from "../../../utils/abortController";
+} from "../../../types/constants.js";
+import type { Abort } from "../../../utils/abortController.js";
 import {
 	connect_piste,
 	getEnum,
@@ -15,19 +15,19 @@ import {
 	setEnvValue,
 	shortenWithEllipsis,
 	splitTextWithtokens,
-} from "../../../utils/environment";
-import type { EmbeddingInterface } from "../../lib/embedding/embeddingBase";
+} from "../../../utils/environment.js";
+import type { EmbeddingInterface } from "../../lib/embedding/embeddingBase.js";
 import {
 	EmbeddingProviders,
 	createEmbedding,
-} from "../../lib/embedding/provider";
-import type { Collection } from "../../vector/collection";
-import vectorManager from "../../vector/vectorManager";
+} from "../../lib/embedding/provider.js";
+import type { Collection } from "../../vector/collection.js";
+import vectorManager from "../../vector/vectorManager.js";
 import {
 	type JudilibreDecision,
 	JudilibreRepository,
-} from "./judilibreRepository";
-import type { JudiDecision, Jurisdiction, Visa } from "./judilibreTypes";
+} from "./judilibreRepository.js";
+import type { JudiDecision, Jurisdiction, Visa } from "./judilibreTypes.js";
 
 type addEmbedding = (
 	embedding: number[],
@@ -553,33 +553,47 @@ export class JudilibreDecisionsSearch extends JudilibreDecisionsBase {
 	}
 
 	async buildTrainingDatasetThemesDecisions(): Promise<string> {
-		const decisionsCount =
-			(await this.judilibreRepository.countForThemesVisasAndSummary()) ?? 0;
 		const resultLines: string[] = [];
-		const uniqueThemes = new Map<string, string>();
 
+		const totalDecisions = await this.getDecisionsCount();
 		let index = 0;
-		for (let offset = 0; offset < decisionsCount; offset += 1000) {
-			const decisions =
-				await this.judilibreRepository.readByThemesVisasAndSummary(
-					offset,
-					1000,
-				);
-			for (const decision of decisions) {
-				index++;
-				const decisionTitle = `${decision.location ?? decision.jurisdiction}${decision.chamber ? `, ${decision.chamber}` : ""} du ${this.buildDate(decision.decisionDate)} n°${decision.number}`;
-				console.info(
-					`Decision ${index} / ${decisionsCount} : ${decision.id} - ${decisionTitle}`,
-				);
+		const decisions = this.buildDecisionsList();
+		for await (const decision of decisions) {
+			index++;
+			const decisionTitle = `${decision.location ?? decision.jurisdiction}${decision.chamber ? `, ${decision.chamber}` : ""} du ${this.buildDate(decision.decisionDate)} n°${decision.number}`;
+			console.info(
+				`Decision ${index} / ${totalDecisions} : ${decision.id} - ${decisionTitle}`,
+			);
+			const prompt = `{"messages":[{"role":"user","content":"${decisionTitle}"},{"role":"assistant","content":"${
+				decision.summary
+			}${decision.visas.length > 0 ? ` ${decision.visas.join(", ")}` : ""}"}]}`;
+			resultLines.push(prompt);
+		}
 
-				const themes = decision.themes.join("|");
-				if (!uniqueThemes.has(themes)) {
-					uniqueThemes.set(themes, decisionTitle);
-				} else {
-					const decisionsIn = (uniqueThemes.get(themes) as string).split("|");
-					decisionsIn.push(decisionTitle);
-					uniqueThemes.set(themes, decisionsIn.join("|"));
-				}
+		return resultLines.join("\n");
+	}
+
+	async buildTrainingDatasetSummariesDecisions(): Promise<string> {
+		const resultLines: string[] = [];
+
+		const totalDecisions = await this.getDecisionsCount();
+		let index = 0;
+		const decisions = this.buildDecisionsList();
+		const uniqueThemes = new Map<string, string>();
+		for await (const decision of decisions) {
+			index++;
+			const decisionTitle = `${decision.location ?? decision.jurisdiction}${decision.chamber ? `, ${decision.chamber}` : ""} du ${this.buildDate(decision.decisionDate)} n°${decision.number}`;
+			console.info(
+				`Decision ${index} / ${totalDecisions} : ${decision.id} - ${decisionTitle}`,
+			);
+
+			const themes = decision.themes.join("|");
+			if (!uniqueThemes.has(themes)) {
+				uniqueThemes.set(themes, decisionTitle);
+			} else {
+				const decisionsIn = (uniqueThemes.get(themes) as string).split("|");
+				decisionsIn.push(decisionTitle);
+				uniqueThemes.set(themes, decisionsIn.join("|"));
 			}
 		}
 
@@ -589,5 +603,28 @@ export class JudilibreDecisionsSearch extends JudilibreDecisionsBase {
 		}
 
 		return resultLines.join("\n");
+	}
+
+	async getDecisionsCount(): Promise<number> {
+		return (
+			(await this.judilibreRepository.countForThemesVisasAndSummary()) ?? 0
+		);
+	}
+
+	async *buildDecisionsList(): AsyncGenerator<JudilibreDecision> {
+		const decisionsCount =
+			(await this.judilibreRepository.countForThemesVisasAndSummary()) ?? 0;
+		const uniqueThemes = new Map<string, { summary: string; title: string }>();
+
+		for (let offset = 0; offset < decisionsCount; offset += 1000) {
+			const decisions =
+				await this.judilibreRepository.readByThemesVisasAndSummary(
+					offset,
+					1000,
+				);
+			for (const decision of decisions) {
+				yield decision;
+			}
+		}
 	}
 }

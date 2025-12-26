@@ -1,8 +1,8 @@
 // Options de hachage (voir documentation : https://github.com/ranisalt/node-argon2/wiki/Options)
 
 import type { RequestHandler } from "express";
-import { getEnvValue } from "../../utils/environment";
-import { extractSecretFromToken } from "../../utils/token";
+import { getEnvValue } from "../../utils/environment.js";
+import { extractSecretFromToken } from "../../utils/token.js";
 
 const checkAuthorization: RequestHandler = (req, res, next) => {
 	const token = req.headers.authorization;

@@ -1,10 +1,10 @@
 import {
 	EmbeddingProviders,
 	createEmbedding,
-} from "../src/modules/lib/embedding/provider";
-import { Vector } from "../src/modules/vector/vectorUtils";
-import { setCurrentDirectory } from "../src/utils/environment";
-import { cosineSimilarity } from "../src/utils/similarity";
+} from "../src/modules/lib/embedding/provider.js";
+import { Vector } from "../src/modules/vector/vectorUtils.js";
+import { setCurrentDirectory } from "../src/utils/environment.js";
+import { cosineSimilarity } from "../src/utils/similarity.js";
 
 const execute = async () => {
 	setCurrentDirectory();

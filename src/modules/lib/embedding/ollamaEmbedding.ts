@@ -1,6 +1,6 @@
 import ollama, { Ollama } from "ollama";
-import { getEnvValue } from "../../../utils/environment";
-import { EmbeddingBase } from "./embeddingBase";
+import { getEnvValue } from "../../../utils/environment.js";
+import { EmbeddingBase } from "./embeddingBase.js";
 
 export class OllamaEmbedding extends EmbeddingBase {
 	private model: string;
