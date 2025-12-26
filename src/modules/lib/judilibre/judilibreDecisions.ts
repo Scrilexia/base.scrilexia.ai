@@ -591,6 +591,8 @@ export class JudilibreDecisionsSearch extends JudilibreDecisionsBase {
 			let summary = "";
 			if (!decision.summary || decision.summary.trim() === "") {
 				summary = decision.motivations.join(" ");
+			} else {
+				summary = decision.summary;
 			}
 
 			summary = summary
