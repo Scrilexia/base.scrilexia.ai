@@ -94,9 +94,6 @@ export class LegiFranceLaws extends LegiFranceBase {
 
 		let index = 0;
 		for (const code of codes) {
-			const articles = await legiFranceArticleRepository.readAllByCodeId(
-				code.id,
-			);
 			console.info(
 				`Law ${index + 1} / ${codes.length} : ${code.title} (${code.id})`,
 			);
