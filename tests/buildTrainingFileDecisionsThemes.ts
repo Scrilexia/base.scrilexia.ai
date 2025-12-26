@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
+import { Agent, fetch } from "undici";
 import { getEnvValue } from "../src/utils/environment.js";
 import { generateToken } from "../src/utils/token.js";
-import { fetch, Agent } from "undici";
 
 const buildTrainingFileDataset = async (isLocal: boolean) => {
 	const secret = getEnvValue("token_secret");

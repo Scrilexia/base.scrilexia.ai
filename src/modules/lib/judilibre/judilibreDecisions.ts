@@ -1,4 +1,5 @@
 import type { AxiosResponse } from "axios";
+import { Response } from "undici";
 import {
 	CHUNK_SIZE,
 	DECISIONS_BLOCKS_COUNT,

@@ -1,6 +1,6 @@
+import * as fs from "node:fs";
 import { Mistral } from "@mistralai/mistralai";
 import { getEnvValue } from "../src/utils/environment.js";
-import * as fs from "node:fs";
 
 const executeMistralTest = async () => {
 	const apiKey = getEnvValue("mistral_api_key");
