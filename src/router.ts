@@ -1,4 +1,4 @@
-import express from "express";
+import express, { type RequestHandler } from "express";
 import {
 	legiFranceArticlesAndLawsBuildTrainingDataset,
 	legiFranceArticlesAndLawsImportAbort,
@@ -29,6 +29,11 @@ export const judilibreDecisionsImportationAbortController = new Abort();
 
 const router = express.Router();
 
+const setTimeoutMiddleware: RequestHandler = (req, res, next) => {
+	req.setTimeout(5 * 60 * 1000); // 5 minutes
+	next();
+};
+
 router.post("/api/articles/sql", legiFranceArticlesImportSql);
 router.post("/api/articles/sql/reset", legiFranceResetArticlesSql);
 router.post("/api/articles/vector", legiFranceArticlesImportQdrant);
@@ -48,10 +53,12 @@ router.post("/api/decisions/sql/reset", judilibreDecisionsImportSqlReset);
 router.post("/api/decisions/abort", judilibreDecisionsImportAbort);
 router.post(
 	"/api/decisions/train/themes",
+	setTimeoutMiddleware,
 	judilibreDecisionsBuildTrainingDatasetThemesAndDecisions,
 );
 router.post(
 	"/api/decisions/train/summaries",
+	setTimeoutMiddleware,
 	judilibreDecisionsBuildTrainingDatasetSummariesAndDecisions,
 );
 
