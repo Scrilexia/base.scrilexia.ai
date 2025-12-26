@@ -30,7 +30,7 @@ export const judilibreDecisionsImportationAbortController = new Abort();
 const router = express.Router();
 
 const setTimeoutMiddleware: RequestHandler = (req, res, next) => {
-	req.setTimeout(5 * 60 * 1000); // 5 minutes
+	req.setTimeout(15 * 60 * 1000); // 15 minutes
 	next();
 };
 
