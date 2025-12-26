@@ -553,7 +553,7 @@ export class JudilibreDecisionsSearch extends JudilibreDecisionsBase {
 		this.judilibreRepository = new JudilibreRepository(this.jurisdiction);
 	}
 
-	async buildTrainingDatasetThemesDecisions(): Promise<string> {
+	async buildTrainingDatasetSummariesDecisions(): Promise<string> {
 		const resultLines: string[] = [];
 
 		const totalDecisions = await this.getDecisionsCount();
@@ -574,7 +574,7 @@ export class JudilibreDecisionsSearch extends JudilibreDecisionsBase {
 		return resultLines.join("\n");
 	}
 
-	async buildTrainingDatasetSummariesDecisions(): Promise<string> {
+	async buildTrainingDatasetThemesDecisions(): Promise<string> {
 		const resultLines: string[] = [];
 
 		const totalDecisions = await this.getDecisionsCount();
