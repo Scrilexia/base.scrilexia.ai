@@ -565,6 +565,7 @@ export class JudilibreDecisionsSearch extends JudilibreDecisionsBase {
 			console.info(
 				`Decision ${index} / ${totalDecisions} : ${decision.id} - ${decisionTitle}`,
 			);
+
 			let visas =
 				decision.visas.length > 0 ? ` ${decision.visas.join(", ")}` : "";
 			visas = visas
@@ -586,7 +587,13 @@ export class JudilibreDecisionsSearch extends JudilibreDecisionsBase {
 				.replace(/\u000D/g, "")
 				.replace(/"/g, "ˮ")
 				.replace(/'/g, "ʹ");
-			const summary = decision.summary
+
+			let summary = "";
+			if (!decision.summary || decision.summary.trim() === "") {
+				summary = decision.motivations.join(" ");
+			}
+
+			summary = summary
 				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
 				.replace(/\u0000/g, "")
 				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>

@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import path from "node:path";
 import { Mistral } from "@mistralai/mistralai";
 import { getEnvValue } from "../src/utils/environment.js";
 
@@ -12,7 +13,7 @@ const executeMistralTest = async (filePath: string) => {
 	const training_file = fs.readFileSync(filePath);
 	const training_data = await client.files.upload({
 		file: {
-			fileName: "articles-et-lois.jsonl",
+			fileName: path.basename(filePath),
 			content: training_file,
 		},
 	});
