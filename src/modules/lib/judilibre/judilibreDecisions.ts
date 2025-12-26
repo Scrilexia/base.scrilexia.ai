@@ -565,8 +565,28 @@ export class JudilibreDecisionsSearch extends JudilibreDecisionsBase {
 			console.info(
 				`Decision ${index} / ${totalDecisions} : ${decision.id} - ${decisionTitle}`,
 			);
+			const summary = decision.summary
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
+				.replace(/\u0000/g, "")
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
+				.replace(/\u0007/g, "")
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
+				.replace(/\u0008/g, "")
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
+				.replace(/\u0009/g, "")
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
+				.replace(/\u000A/g, "")
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
+				.replace(/\u000B/g, "")
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
+				.replace(/\u000C/g, "")
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
+				.replace(/\u000D/g, "")
+				.replace(/\"/g, "ˮ")
+				.replace(/'/g, "ʹ");
+
 			const prompt = `{"messages":[{"role":"user","content":"${decisionTitle}"},{"role":"assistant","content":"${
-				decision.summary
+				summary
 			}${decision.visas.length > 0 ? ` ${decision.visas.join(", ")}` : ""}"}]}`;
 			resultLines.push(prompt);
 		}
@@ -628,26 +648,6 @@ export class JudilibreDecisionsSearch extends JudilibreDecisionsBase {
 					1000,
 				);
 			for (const decision of decisions) {
-				decision.summary = decision.summary
-					// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-					.replace(/\u0000/g, "")
-					// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-					.replace(/\u0007/g, "")
-					// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-					.replace(/\u0008/g, "")
-					// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-					.replace(/\u0009/g, "")
-					// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-					.replace(/\u000A/g, "")
-					// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-					.replace(/\u000B/g, "")
-					// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-					.replace(/\u000C/g, "")
-					// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-					.replace(/\u000D/g, "")
-					.replaceAll('"', "ˮ")
-					.replaceAll("'", "ʹ");
-
 				yield decision;
 			}
 		}
