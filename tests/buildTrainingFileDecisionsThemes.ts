@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { getEnvValue } from "../src/utils/environment.js";
 import { generateToken } from "../src/utils/token.js";
+import { fetch, Agent } from "undici";
 
 const buildTrainingFileDataset = async (isLocal: boolean) => {
 	const secret = getEnvValue("token_secret");
@@ -16,6 +17,12 @@ const buildTrainingFileDataset = async (isLocal: boolean) => {
 	process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 	try {
+		const agent = new Agent({
+			connect: { timeout: 0 }, // 0 = illimité
+			headersTimeout: 0, // illimité
+			bodyTimeout: 0, // illimité
+		});
+
 		const response = await fetch(
 			isLocal
 				? "http://localhost:4310/api/decisions/train/themes"
@@ -27,6 +34,7 @@ const buildTrainingFileDataset = async (isLocal: boolean) => {
 					Authorization: `Bearer ${generateToken(secret, password, 60 * 60 * 1000) ?? ""}`,
 				},
 				body: JSON.stringify({ jurisdiction: "cc" }),
+				dispatcher: agent,
 			},
 		);
 

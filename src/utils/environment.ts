@@ -5,6 +5,7 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 import axios, { type AxiosResponse, type AxiosRequestConfig } from "axios";
 import { TokenTextSplitter } from "langchain/text_splitter";
+import { fetch, RequestInit, Response } from "undici";
 
 export function setCurrentDirectory() {
 	try {
