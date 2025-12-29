@@ -559,11 +559,11 @@ export class JudilibreDecisionsSearch extends JudilibreDecisionsBase {
 		const resultLines: string[] = [];
 
 		const explicitQuestions: string[] = [
-			"Résume l'arrêt de la cour de cassation: ___USER_CONTENT___",
-			"Que dit l'arrêt de la cour de cassation : ___USER_CONTENT___",
-			"Peux-tu résumer l'arrêt de la cour de cassation : ___USER_CONTENT___",
-			"Résumé de l'arrêt de la cour de cassation : ___USER_CONTENT___",
-			"J’aimerais le résumé de l'arrêt de la cour de cassation : ___USER_CONTENT___",
+			"Résume l'arrêt : ___USER_CONTENT___",
+			"Que dit l'arrêt : ___USER_CONTENT___",
+			"Peux-tu résumer l'arrêt : ___USER_CONTENT___",
+			"Résumé de l'arrêt : ___USER_CONTENT___",
+			"J’aimerais que tu cites le résumé de l'arrêt : ___USER_CONTENT___",
 		];
 
 		const compactQuestions: string[] = [
@@ -578,7 +578,7 @@ export class JudilibreDecisionsSearch extends JudilibreDecisionsBase {
 		const decisions = this.buildDecisionsList();
 		for await (const decision of decisions) {
 			index++;
-			const decisionTitle = `${decision.location ?? decision.jurisdiction}${decision.chamber ? `, ${decision.chamber}` : ""} du ${this.buildDate(decision.decisionDate)}${decision.number ? ` n°${decision.number}` : ""}`;
+			const decisionTitle = `${decision.location ?? decision.jurisdiction}${decision.chamber ? `, ${decision.chamber}` : ""} du ${this.buildDate(decision.decisionDate)}${decision.number !== "-." ? ` n°${decision.number}` : ""}`;
 			console.info(
 				`Decision ${index} / ${totalDecisions} : ${decision.id} - ${decisionTitle}`,
 			);
