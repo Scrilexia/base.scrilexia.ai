@@ -617,7 +617,7 @@ export class JudilibreDecisionsSearch extends JudilibreDecisionsBase {
 			"Mots clés : ___USER_CONTENT___",
 			"Liste de mots : ___USER_CONTENT___",
 			"Voici des mots clés : ___USER_CONTENT___",
-			"Arrêts de la cour de cassation associés à ces mots clés : ___USER_CONTENT___",
+			"Arrêt(s) de la cour de cassation associé(s) à ces mots clés : ___USER_CONTENT___",
 			"Peux-tu identifier le(s) arrêt(s) de la cour de cassation correspondant à : ___USER_CONTENT___",
 		];
 

@@ -317,7 +317,7 @@ export class LegiFranceBase extends TrainingModule {
 
 		const explicitQuestions: string[] = [
 			"Définis l'article : ___USER_CONTENT___",
-			"Donne lle contenu de l'article : ___USER_CONTENT___",
+			"Donne le contenu de l'article : ___USER_CONTENT___",
 			"Que dit l'article : ___USER_CONTENT___",
 			"Peux-tu citer l'article : ___USER_CONTENT___",
 			"Citation de l'article : ___USER_CONTENT___",
