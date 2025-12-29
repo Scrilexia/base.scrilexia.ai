@@ -26,21 +26,21 @@ import {
 
 import { CHUNK_SIZE } from "../../../types/constants.js";
 import type { Abort } from "../../../utils/abortController.js";
+import { TrainingModule } from "../../lib/training/training.js";
 import type { EmbeddingInterface } from "../embedding/embeddingBase.js";
 import { EmbeddingProviders, createEmbedding } from "../embedding/provider.js";
 
 const MAX_INPUT_TOKENS = 2 * 1024 * 1024;
 
-export class LegiFranceBase {
+export class LegiFranceBase extends TrainingModule {
 	protected hfToken: string | null = null;
 	protected hfModel: string | null = null;
 	protected collection: Collection | null = null;
-	protected abortController: Abort;
 	protected embeddingInstance: EmbeddingInterface | null;
 	protected target: legiFranceStorageTarget;
 
 	constructor(abortController: Abort, target: legiFranceStorageTarget) {
-		this.abortController = abortController;
+		super(abortController);
 		this.target = target;
 		this.embeddingInstance = null;
 
@@ -315,46 +315,29 @@ export class LegiFranceBase {
 			// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
 			/[\u0000-\u001F\u007F\u200B\u200C\u200D\u200E\u200F\u202A-\u202E\u2060\uFEFF]/g;
 
+		const explicitQuestions: string[] = [
+			"Définis l'article : ___USER_CONTENT___",
+			"Donne lle contenu de l'article : ___USER_CONTENT___",
+			"Que dit l'article : ___USER_CONTENT___",
+			"Peux-tu citer l'article : ___USER_CONTENT___",
+			"Citation de l'article : ___USER_CONTENT___",
+			"J’aimerais que tu cites l'article : ___USER_CONTENT___",
+		];
+
+		const compactQuestions: string[] = [
+			"___USER_CONTENT___",
+			"Citation : ___USER_CONTENT___",
+			"___USER_CONTENT___ — citation",
+			"Article : ___USER_CONTENT___",
+		];
+
 		const articles = await legiFranceArticleRepository.readAllByCodeId(codeId);
 		for (const article of articles) {
-			let text = article.text
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u0000/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u0007/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u0008/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u0009/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u000A/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u000B/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u000C/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u000D/g, "")
-				.replaceAll('"', "ˮ")
-				.replaceAll("'", "ʹ");
-			const numberAndTitle = `Article ${article.number} de la ${codeTitle}`
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u0000/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u0007/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u0008/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u0009/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u000A/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u000B/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u000C/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u000D/g, "")
-				.replaceAll('"', "ˮ")
-				.replaceAll("'", "ʹ");
+			let text = this.removeForbiddenCharacters(article.text);
+
+			const numberAndTitle = this.removeForbiddenCharacters(
+				"Article ${article.number} de la ${codeTitle}",
+			);
 
 			const matchInvisibleChars = invisibleCharsRegex.exec(text);
 			if (matchInvisibleChars) {
@@ -372,7 +355,12 @@ export class LegiFranceBase {
 				}
 			}
 
-			const prompt = `{"messages":[{"role":"user","content":"${numberAndTitle}"},{"role":"assistant","content":"${text}"}]}`;
+			const userPrompt = this.generateUserPrompt(
+				numberAndTitle,
+				explicitQuestions,
+				compactQuestions,
+			);
+			const prompt = `{"messages":[{"role":"user","content":"${userPrompt}"},{"role":"assistant","content":"${text}"}]}`;
 			resultLines.push(prompt);
 		}
 		return resultLines;

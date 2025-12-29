@@ -74,6 +74,7 @@ export const judilibreDecisionsBuildTrainingDatasetThemesAndDecisions: RequestHa
 	async (req, res, next) => {
 		judilibreDecisionsImportationAbortController.reset();
 		const judilibreDecisions = new JudilibreDecisionsSearch(
+			judilibreDecisionsImportationAbortController,
 			req.body.jurisdiction ?? "cc",
 		);
 
@@ -86,6 +87,7 @@ export const judilibreDecisionsBuildTrainingDatasetSummariesAndDecisions: Reques
 	async (req, res, next) => {
 		judilibreDecisionsImportationAbortController.reset();
 		const judilibreDecisions = new JudilibreDecisionsSearch(
+			judilibreDecisionsImportationAbortController,
 			req.body.jurisdiction ?? "cc",
 		);
 

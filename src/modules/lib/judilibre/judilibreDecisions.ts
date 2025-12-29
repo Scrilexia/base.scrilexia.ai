@@ -24,6 +24,7 @@ import {
 } from "../../lib/embedding/provider.js";
 import type { Collection } from "../../vector/collection.js";
 import vectorManager from "../../vector/vectorManager.js";
+import { TrainingModule } from "../training/training.js";
 import {
 	type JudilibreDecision,
 	JudilibreRepository,
@@ -35,11 +36,13 @@ type addEmbedding = (
 	zone: string,
 	sentence: string,
 ) => Promise<void>;
-export class JudilibreDecisionsBase {
+
+export class JudilibreDecisionsBase extends TrainingModule {
 	protected jurisdiction: Jurisdiction;
 	protected judilibreRepository: JudilibreRepository;
 
-	constructor(jurisdiction: Jurisdiction) {
+	constructor(abortController: Abort, jurisdiction: Jurisdiction) {
+		super(abortController);
 		this.jurisdiction = jurisdiction;
 		this.judilibreRepository = new JudilibreRepository(this.jurisdiction);
 	}
@@ -59,7 +62,6 @@ export class JudilibreDecisionsBase {
 export class JudilibreDecisions extends JudilibreDecisionsBase {
 	#endDate: Date;
 	private collection: Collection | null = null;
-	private abortController: Abort;
 	private oldestDecisionDate: Date;
 	private embeddingInstance: EmbeddingInterface;
 	private startIndex = 0;
@@ -72,7 +74,7 @@ export class JudilibreDecisions extends JudilibreDecisionsBase {
 		startIndex = 0,
 		maxDecisionsToImport = -1,
 	) {
-		super(jurisdiction);
+		super(abortController, jurisdiction);
 		this.#endDate = endDate;
 		this.startIndex = startIndex;
 		this.maxDecisionsToImport = maxDecisionsToImport;
@@ -548,13 +550,28 @@ export class JudilibreDecisionsSqlReset {
 }
 
 export class JudilibreDecisionsSearch extends JudilibreDecisionsBase {
-	constructor(jurisdiction: Jurisdiction) {
-		super(jurisdiction);
+	constructor(abortController: Abort, jurisdiction: Jurisdiction) {
+		super(abortController, jurisdiction);
 		this.judilibreRepository = new JudilibreRepository(this.jurisdiction);
 	}
 
 	async buildTrainingDatasetSummariesDecisions(): Promise<string> {
 		const resultLines: string[] = [];
+
+		const explicitQuestions: string[] = [
+			"Résume l'arrêt de la cour de cassation: ___USER_CONTENT___",
+			"Que dit l'arrêt de la cour de cassation : ___USER_CONTENT___",
+			"Peux-tu résumer l'arrêt de la cour de cassation : ___USER_CONTENT___",
+			"Résumé de l'arrêt de la cour de cassation : ___USER_CONTENT___",
+			"J’aimerais le résumé de l'arrêt de la cour de cassation : ___USER_CONTENT___",
+		];
+
+		const compactQuestions: string[] = [
+			"___USER_CONTENT___",
+			"Résumé : ___USER_CONTENT___",
+			"___USER_CONTENT___ — résumé",
+			"Arrêt : ___USER_CONTENT___",
+		];
 
 		const totalDecisions = await this.getDecisionsCount();
 		let index = 0;
@@ -568,25 +585,7 @@ export class JudilibreDecisionsSearch extends JudilibreDecisionsBase {
 
 			let visas =
 				decision.visas.length > 0 ? ` ${decision.visas.join(", ")}` : "";
-			visas = visas
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u0000/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u0007/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u0008/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u0009/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u000A/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u000B/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u000C/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u000D/g, "")
-				.replace(/"/g, "ˮ")
-				.replace(/'/g, "ʹ");
+			visas = this.removeForbiddenCharacters(visas);
 
 			let summary = "";
 			if (!decision.summary || decision.summary.trim() === "") {
@@ -595,27 +594,14 @@ export class JudilibreDecisionsSearch extends JudilibreDecisionsBase {
 				summary = decision.summary;
 			}
 
-			summary = summary
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u0000/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u0007/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u0008/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u0009/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u000A/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u000B/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u000C/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u000D/g, "")
-				.replace(/"/g, "ˮ")
-				.replace(/'/g, "ʹ");
+			summary = this.removeForbiddenCharacters(summary);
+			const userPrompt = this.generateUserPrompt(
+				decisionTitle,
+				explicitQuestions,
+				compactQuestions,
+			);
 
-			const prompt = `{"messages":[{"role":"user","content":"${decisionTitle}"},{"role":"assistant","content":"${
+			const prompt = `{"messages":[{"role":"user","content":"${userPrompt}"},{"role":"assistant","content":"${
 				summary
 			}${visas}"}]}`;
 			resultLines.push(prompt);
@@ -626,6 +612,20 @@ export class JudilibreDecisionsSearch extends JudilibreDecisionsBase {
 
 	async buildTrainingDatasetThemesDecisions(): Promise<string> {
 		const resultLines: string[] = [];
+
+		const explicitQuestions: string[] = [
+			"Mots clés : ___USER_CONTENT___",
+			"Liste de mots : ___USER_CONTENT___",
+			"Voici des mots clés : ___USER_CONTENT___",
+			"Arrêts de la cour de cassation associés à ces mots clés : ___USER_CONTENT___",
+			"Peux-tu identifier le(s) arrêt(s) de la cour de cassation correspondant à : ___USER_CONTENT___",
+		];
+
+		const compactQuestions: string[] = [
+			"___USER_CONTENT___",
+			"Arrêt(s) de la cour de cassation pour : ___USER_CONTENT___",
+			"Associe un (ou des) arrêt(s) de la cour de cassation à : ___USER_CONTENT___",
+		];
 
 		const totalDecisions = await this.getDecisionsCount();
 		let index = 0;
@@ -638,26 +638,7 @@ export class JudilibreDecisionsSearch extends JudilibreDecisionsBase {
 				`Decision ${index} / ${totalDecisions} : ${decision.id} - ${decisionTitle}`,
 			);
 
-			const themes = decision.themes
-				.join("|")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u0000/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u0007/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u0008/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u0009/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u000A/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u000B/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u000C/g, "")
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
-				.replace(/\u000D/g, "")
-				.replaceAll('"', "ˮ")
-				.replaceAll("'", "ʹ");
+			const themes = this.removeForbiddenCharacters(decision.themes.join("|"));
 
 			if (!uniqueThemes.has(themes)) {
 				uniqueThemes.set(themes, decisionTitle);
@@ -669,7 +650,13 @@ export class JudilibreDecisionsSearch extends JudilibreDecisionsBase {
 		}
 
 		for (const [themes, decisionsTitles] of uniqueThemes) {
-			const prompt = `{"messages":[{"role":"user","content":"${themes.split("|").join(", ")}"},{"role":"assistant","content":"${decisionsTitles.split("|").join("; ")}"}]}`;
+			const userContent = `Thèmes : ${themes.split("|").join(", ")}`;
+			const userPrompt = this.generateUserPrompt(
+				userContent,
+				explicitQuestions,
+				compactQuestions,
+			);
+			const prompt = `{"messages":[{"role":"user","content":"${userPrompt}"},{"role":"assistant","content":"${decisionsTitles.split("|").join("; ")}"}]}`;
 			resultLines.push(prompt);
 		}
 
