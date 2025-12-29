@@ -98,7 +98,9 @@ export class LegiFranceLaws extends LegiFranceBase {
 				`Law ${index + 1} / ${codes.length} : ${code.title} (${code.id})`,
 			);
 			index++;
-			resultLines.push(...(await this.buildArticlesList(code.id, code.title)));
+			resultLines.push(
+				...(await this.buildArticlesList(code.id, code.title, false)),
+			);
 		}
 
 		const max = Math.max(...resultLines.map((line) => line.length));

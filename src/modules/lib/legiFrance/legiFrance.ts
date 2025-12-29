@@ -308,6 +308,7 @@ export class LegiFranceBase extends TrainingModule {
 	protected async buildArticlesList(
 		codeId: string,
 		codeTitle: string,
+		code: boolean,
 	): Promise<string[]> {
 		const resultLines: string[] = [];
 		const invisibleCharsRegex =
@@ -336,7 +337,7 @@ export class LegiFranceBase extends TrainingModule {
 			let text = this.removeForbiddenCharacters(article.text);
 
 			const numberAndTitle = this.removeForbiddenCharacters(
-				`Article ${article.number} de la ${codeTitle}`,
+				`Article ${article.number} ${code ? "du" : "de la"} ${codeTitle}`,
 			);
 
 			const matchInvisibleChars = invisibleCharsRegex.exec(text);
