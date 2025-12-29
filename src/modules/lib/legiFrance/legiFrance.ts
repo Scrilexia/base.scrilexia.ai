@@ -336,7 +336,7 @@ export class LegiFranceBase extends TrainingModule {
 			let text = this.removeForbiddenCharacters(article.text);
 
 			const numberAndTitle = this.removeForbiddenCharacters(
-				"Article ${article.number} de la ${codeTitle}",
+				`Article ${article.number} de la ${codeTitle}`,
 			);
 
 			const matchInvisibleChars = invisibleCharsRegex.exec(text);
