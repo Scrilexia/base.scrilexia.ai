@@ -578,7 +578,7 @@ export class JudilibreDecisionsSearch extends JudilibreDecisionsBase {
 		const decisions = this.buildDecisionsList();
 		for await (const decision of decisions) {
 			index++;
-			const decisionTitle = `${decision.location ?? decision.jurisdiction}${decision.chamber ? `, ${decision.chamber}` : ""} du ${this.buildDate(decision.decisionDate)} n°${decision.number}`;
+			const decisionTitle = `${decision.location ?? decision.jurisdiction}${decision.chamber ? `, ${decision.chamber}` : ""} du ${this.buildDate(decision.decisionDate)}${decision.number ? ` n°${decision.number}` : ""}`;
 			console.info(
 				`Decision ${index} / ${totalDecisions} : ${decision.id} - ${decisionTitle}`,
 			);
@@ -650,7 +650,7 @@ export class JudilibreDecisionsSearch extends JudilibreDecisionsBase {
 		}
 
 		for (const [themes, decisionsTitles] of uniqueThemes) {
-			const userContent = `Thèmes : ${themes.split("|").join(", ")}`;
+			const userContent = themes.split("|").join(", ");
 			const userPrompt = this.generateUserPrompt(
 				userContent,
 				explicitQuestions,
