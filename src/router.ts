@@ -21,6 +21,9 @@ import {
 	judilibreDecisionsImportVector,
 	judilibreDecisionsImportVectorReset,
 } from "./modules/lib/judilibre/judilibreActions.js";
+
+import { databaseCodeArticles } from "./modules/lib/database/databaseCodeActions.js";
+
 import { Abort } from "./utils/abortController.js";
 
 export const legiFranceAddArticlesAbortController = new Abort();
@@ -61,5 +64,7 @@ router.post(
 	setTimeoutMiddleware,
 	judilibreDecisionsBuildTrainingDatasetSummariesAndDecisions,
 );
+
+router.post("/api/code", databaseCodeArticles);
 
 export { router };
