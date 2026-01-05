@@ -22,7 +22,10 @@ import {
 	judilibreDecisionsImportVectorReset,
 } from "./modules/lib/judilibre/judilibreActions.js";
 
-import { databaseCodeArticles } from "./modules/lib/database/databaseCodeActions.js";
+import {
+	databaseCodeArticles,
+	databaseLawArticles,
+} from "./modules/lib/database/databaseActions.js";
 
 import { Abort } from "./utils/abortController.js";
 
@@ -66,5 +69,6 @@ router.post(
 );
 
 router.post("/api/code", databaseCodeArticles);
+router.post("/api/law", databaseLawArticles);
 
 export { router };

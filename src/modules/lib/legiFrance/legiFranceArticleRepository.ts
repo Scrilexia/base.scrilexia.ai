@@ -126,6 +126,25 @@ class LegiFranceCodeOrLawRepository extends BaseRepository {
 		}));
 	}
 
+	async readByTitle(title: string): Promise<LegiFranceCode[]> {
+		this.connect();
+
+		const arrayTitle = title.split(" ");
+		const modifiedTitle = arrayTitle.join("%");
+		const [rows] = await this.client.query<Rows>(
+			"SELECT * FROM lf_code_law WHERE title LIKE ?",
+			[modifiedTitle],
+		);
+		return rows.map((row) => ({
+			id: row.id,
+			title: row.title,
+			state: row.state,
+			titleFull: row.title_full,
+			startDate: row.start_date,
+			endDate: row.end_date,
+		}));
+	}
+
 	// update
 	async update(code: LegiFranceCode): Promise<void> {
 		this.connect();
