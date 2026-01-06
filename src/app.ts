@@ -4,10 +4,12 @@ import path from "node:path";
 import bodyParser from "body-parser";
 import express from "express";
 import authActions from "./modules/auth/authActions.js";
-import { router } from "./router.js";
+import { router, routerQuery } from "./router.js";
 import { getEnvValue, setCurrentDirectory } from "./utils/environment.js";
 
 const app = express();
+const appQuery = express();
+
 let serverApp: https.Server | undefined = undefined;
 
 setCurrentDirectory();
@@ -46,9 +48,22 @@ app.use(express.raw());
 app.use("/api", authActions.checkAuthorization);
 app.use(router);
 
+appQuery.use(bodyParser.json({ limit: "20000mb" }));
+appQuery.use(express.json());
+appQuery.use(express.urlencoded({ extended: true }));
+appQuery.use(express.text());
+appQuery.use(express.raw());
+
+appQuery.use(routerQuery);
+
 app.use((req, res) => {
 	console.info(`Unauthorized access attempt to: ${req.url}`);
 	res.status(401).send("Unauthorized");
 });
 
-export { app, serverApp };
+appQuery.use((req, res) => {
+	console.info(`Unauthorized access attempt to: ${req.url}`);
+	res.status(401).send("Unauthorized");
+});
+
+export { app, appQuery, serverApp };

@@ -34,6 +34,7 @@ export const legiFranceAddArticlesAndLawsAbortController = new Abort();
 export const judilibreDecisionsImportationAbortController = new Abort();
 
 const router = express.Router();
+const routerQuery = express.Router();
 
 const setTimeoutMiddleware: RequestHandler = (req, res, next) => {
 	req.setTimeout(15 * 60 * 1000); // 15 minutes
@@ -68,7 +69,7 @@ router.post(
 	judilibreDecisionsBuildTrainingDatasetSummariesAndDecisions,
 );
 
-router.post("/api/code", databaseCodeArticles);
-router.post("/api/law", databaseLawArticles);
+routerQuery.post("/api/code", databaseCodeArticles);
+routerQuery.post("/api/law", databaseLawArticles);
 
-export { router };
+export { router, routerQuery };
