@@ -203,6 +203,47 @@ export class JudilibreRepository extends BaseRepository {
 		return rows[0].count;
 	}
 
+	async readAllByChamberDateAndNumber(
+		chamber: string,
+		decisionDate: string | null,
+		number: string | null,
+	): Promise<Array<JudilibreDecision>> {
+		this.connect();
+
+		const parameters: Array<string> = ["chamber = ?"];
+		const values: Array<string> = [chamber];
+
+		if (decisionDate) {
+			parameters.push("decision_date = ?");
+			values.push(decisionDate);
+		}
+		if (number) {
+			parameters.push("number = ?");
+			values.push(number);
+		}
+
+		const [rows] = await this.client.query<Rows>(
+			`SELECT * FROM jdl_decision_${this.jurisdiction} WHERE ${parameters.join(" AND ")} ORDER BY decision_date DESC`,
+			values,
+		);
+
+		return rows.map((row) => ({
+			id: row.id,
+			jurisdiction: row.jurisdiction,
+			location: row.location,
+			chamber: row.chamber,
+			number: row.number,
+			decisionDate: row.decision_date,
+			type: row.type,
+			text: row.text,
+			motivations: row.motivations,
+			solution: row.solution,
+			summary: row.summary,
+			themes: row.themes,
+			visas: row.visas,
+		}));
+	}
+
 	// update
 	async update(decision: JudilibreDecision): Promise<void> {
 		this.connect();

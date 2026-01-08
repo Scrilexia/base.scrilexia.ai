@@ -689,4 +689,16 @@ export class JudilibreDecisionsSearch extends JudilibreDecisionsBase {
 			}
 		}
 	}
+
+	async retrieveDecisions(
+		chamber: string,
+		decisionDate: string | null,
+		number: string | null,
+	): Promise<Array<JudilibreDecision>> {
+		return await this.judilibreRepository.readAllByChamberDateAndNumber(
+			chamber,
+			decisionDate,
+			number,
+		);
+	}
 }

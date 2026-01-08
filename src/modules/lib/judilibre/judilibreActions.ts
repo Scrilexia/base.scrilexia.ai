@@ -6,6 +6,7 @@ import {
 	JudilibreDecisionsSearch,
 	JudilibreDecisionsSqlReset,
 } from "./judilibreDecisions.js";
+import { Jurisdiction } from "./judilibreTypes.js";
 
 export const judilibreDecisionsImportVector: RequestHandler = async (
 	req,
@@ -95,3 +96,30 @@ export const judilibreDecisionsBuildTrainingDatasetSummariesAndDecisions: Reques
 			await judilibreDecisions.buildTrainingDatasetSummariesDecisions();
 		res.status(200).send(dataset);
 	};
+
+export const databaseDecisionsCc: RequestHandler = async (req, res, next) => {
+	const judilibreDecisions = new JudilibreDecisionsSearch(
+		judilibreDecisionsImportationAbortController,
+		Jurisdiction.COUR_DE_CASSATION,
+	);
+
+	if (!req.body.chamber || typeof req.body.chamber !== "string") {
+		res.status(400).send("chamber is required and must be a string");
+		return;
+	}
+
+	const decisionDate =
+		typeof req.body.decisionDate === "string"
+			? (req.body.decisionDate as string)
+			: null;
+	const number =
+		typeof req.body.number === "string" ? (req.body.number as string) : null;
+
+	const decisions = await judilibreDecisions.retrieveDecisions(
+		req.body.chamber as string,
+		decisionDate,
+		number,
+	);
+
+	res.status(200).json(decisions);
+};

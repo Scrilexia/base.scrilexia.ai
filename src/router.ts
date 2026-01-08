@@ -13,6 +13,7 @@ import {
 } from "./modules/lib/legiFrance/legiFranceActions.js";
 
 import {
+	databaseDecisionsCc,
 	judilibreDecisionsBuildTrainingDatasetSummariesAndDecisions,
 	judilibreDecisionsBuildTrainingDatasetThemesAndDecisions,
 	judilibreDecisionsImportAbort,
@@ -71,5 +72,6 @@ router.post(
 
 routerQuery.post("/api/code", databaseCodeArticles);
 routerQuery.post("/api/law", databaseLawArticles);
+routerQuery.post("/api/decision/cc", databaseDecisionsCc);
 
 export { router, routerQuery };
