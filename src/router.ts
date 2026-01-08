@@ -74,4 +74,8 @@ routerQuery.post("/api/code", databaseCodeArticles);
 routerQuery.post("/api/law", databaseLawArticles);
 routerQuery.post("/api/decision/cc", databaseDecisionsCc);
 
+router.post("/api/code", databaseCodeArticles);
+router.post("/api/law", databaseLawArticles);
+router.post("/api/decision/cc", databaseDecisionsCc);
+
 export { router, routerQuery };
