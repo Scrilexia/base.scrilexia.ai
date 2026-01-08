@@ -589,7 +589,9 @@ export class JudilibreDecisionsSearch extends JudilibreDecisionsBase {
 
 			let summary = "";
 			if (!decision.summary || decision.summary.trim() === "") {
-				summary = decision.motivations.join(" ");
+				summary = decision.motivations
+					.map((zone) => decision.text.substring(zone.start, zone.end))
+					.join(" ");
 			} else {
 				summary = decision.summary;
 			}
