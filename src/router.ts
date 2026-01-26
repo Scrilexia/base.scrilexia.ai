@@ -13,7 +13,10 @@ import {
 } from "./modules/lib/legiFrance/legiFranceActions.js";
 
 import {
+	databaseDecisionsCa,
+	databaseDecisionsCaById,
 	databaseDecisionsCc,
+	databaseDecisionsCcById,
 	judilibreDecisionsBuildTrainingDatasetSummariesAndDecisions,
 	judilibreDecisionsBuildTrainingDatasetThemesAndDecisions,
 	judilibreDecisionsImportAbort,
@@ -73,9 +76,15 @@ router.post(
 routerQuery.post("/api/code", databaseCodeArticles);
 routerQuery.post("/api/law", databaseLawArticles);
 routerQuery.post("/api/decision/cc", databaseDecisionsCc);
+routerQuery.post("/api/decision/ca", databaseDecisionsCa);
+routerQuery.post("/api/decision/cc/id", databaseDecisionsCcById);
+routerQuery.post("/api/decision/ca/id", databaseDecisionsCaById);
 
 router.post("/api/code", databaseCodeArticles);
 router.post("/api/law", databaseLawArticles);
 router.post("/api/decision/cc", databaseDecisionsCc);
+router.post("/api/decision/ca", databaseDecisionsCa);
+router.post("/api/decision/cc/id", databaseDecisionsCcById);
+router.post("/api/decision/ca/id", databaseDecisionsCaById);
 
 export { router, routerQuery };

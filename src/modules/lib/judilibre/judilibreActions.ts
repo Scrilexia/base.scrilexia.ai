@@ -116,10 +116,96 @@ export const databaseDecisionsCc: RequestHandler = async (req, res, next) => {
 		typeof req.body.number === "string" ? (req.body.number as string) : null;
 
 	const decisions = await judilibreDecisions.retrieveDecisions(
+		null,
 		req.body.chamber as string,
 		decisionDate,
 		number,
 	);
 
 	res.status(200).json(decisions);
+};
+
+export const databaseDecisionsCa: RequestHandler = async (req, res, next) => {
+	const judilibreDecisions = new JudilibreDecisionsSearch(
+		judilibreDecisionsImportationAbortController,
+		Jurisdiction.COURS_APPEL,
+	);
+
+	if (!req.body.chamber || typeof req.body.chamber !== "string") {
+		res.status(400).send("chamber is required and must be a string");
+		return;
+	}
+
+	if (!req.body.location || typeof req.body.location !== "string") {
+		res.status(400).send("location is required and must be a string");
+		return;
+	}
+
+	const decisionDate =
+		typeof req.body.decisionDate === "string"
+			? (req.body.decisionDate as string)
+			: null;
+	const number =
+		typeof req.body.number === "string" ? (req.body.number as string) : null;
+
+	const decisions = await judilibreDecisions.retrieveDecisions(
+		req.body.location as string,
+		req.body.chamber as string,
+		decisionDate,
+		number,
+	);
+
+	res.status(200).json(decisions);
+};
+
+export const databaseDecisionsCcById: RequestHandler = async (
+	req,
+	res,
+	next,
+) => {
+	const judilibreDecisions = new JudilibreDecisionsSearch(
+		judilibreDecisionsImportationAbortController,
+		Jurisdiction.COUR_DE_CASSATION,
+	);
+
+	if (!req.body.id || typeof req.body.id !== "string") {
+		res.status(400).send("id is required and must be a string");
+		return;
+	}
+	const decision = await judilibreDecisions.retrieveDecisionById(
+		req.body.id as string,
+	);
+
+	if (!decision) {
+		res.status(404).send("Decision not found");
+		return;
+	}
+
+	res.status(200).json(decision);
+};
+
+export const databaseDecisionsCaById: RequestHandler = async (
+	req,
+	res,
+	next,
+) => {
+	const judilibreDecisions = new JudilibreDecisionsSearch(
+		judilibreDecisionsImportationAbortController,
+		Jurisdiction.COURS_APPEL,
+	);
+
+	if (!req.body.id || typeof req.body.id !== "string") {
+		res.status(400).send("id is required and must be a string");
+		return;
+	}
+	const decision = await judilibreDecisions.retrieveDecisionById(
+		req.body.id as string,
+	);
+
+	if (!decision) {
+		res.status(404).send("Decision not found");
+		return;
+	}
+
+	res.status(200).json(decision);
 };
