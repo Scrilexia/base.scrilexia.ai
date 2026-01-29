@@ -28,6 +28,7 @@ import {
 
 import {
 	databaseCodeArticles,
+	databaseCodeLawArticlesById,
 	databaseLawArticles,
 } from "./modules/lib/database/databaseActions.js";
 
@@ -75,6 +76,7 @@ router.post(
 
 routerQuery.post("/api/code", databaseCodeArticles);
 routerQuery.post("/api/law", databaseLawArticles);
+routerQuery.post("/api/codelaw/id", databaseCodeLawArticlesById);
 routerQuery.post("/api/decision/cc", databaseDecisionsCc);
 routerQuery.post("/api/decision/ca", databaseDecisionsCa);
 routerQuery.post("/api/decision/cc/id", databaseDecisionsCcById);
@@ -82,6 +84,7 @@ routerQuery.post("/api/decision/ca/id", databaseDecisionsCaById);
 
 router.post("/api/code", databaseCodeArticles);
 router.post("/api/law", databaseLawArticles);
+router.post("/api/codelaw/id", databaseCodeLawArticlesById);
 router.post("/api/decision/cc", databaseDecisionsCc);
 router.post("/api/decision/ca", databaseDecisionsCa);
 router.post("/api/decision/cc/id", databaseDecisionsCcById);

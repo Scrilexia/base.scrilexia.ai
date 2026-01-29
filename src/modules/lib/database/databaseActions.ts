@@ -69,3 +69,26 @@ export const databaseLawArticles: RequestHandler = async (req, res, next) => {
 		res.status(500).send("Internal Server Error");
 	}
 };
+
+export const databaseCodeLawArticlesById: RequestHandler = async (
+	req,
+	res,
+	next,
+) => {
+	const id = req.body.id;
+
+	if (!id) {
+		res.status(400).send("id is required");
+		return;
+	}
+
+	try {
+		legiFranceCodeOrLawRepository.initializeDatabase();
+
+		const code = await legiFranceCodeOrLawRepository.read(id);
+
+		res.status(200).json(code);
+	} catch (error) {
+		res.status(500).send("Internal Server Error");
+	}
+};
