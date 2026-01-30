@@ -506,10 +506,12 @@ export class JudilibreDecisions extends JudilibreDecisionsBase {
 				return;
 		}
 
-		sentences = sentences.map((sentence) => `passage: ${sentence.trim()}`);
+		const sentencesToInsert = sentences.map(
+			(sentence) => `passage: ${sentence.trim()}`,
+		);
 
 		const embeddings: number[][] =
-			await this.embeddingInstance.embedBatch(sentences);
+			await this.embeddingInstance.embedBatch(sentencesToInsert);
 
 		for (let i = 0; i < sentences.length; i++) {
 			const embedding = embeddings[i];
