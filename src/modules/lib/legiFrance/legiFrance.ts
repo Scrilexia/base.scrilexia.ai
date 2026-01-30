@@ -220,9 +220,10 @@ export class LegiFranceBase extends TrainingModule {
 			);
 
 			for (const chunk of chunks) {
+				const chunkToInsert = `passage: ${chunk.trim()}`;
 				const embedding = await trySeveralTimes<number[]>(
 					async () =>
-						(await this.embeddingInstance?.embed(chunk)) ??
+						(await this.embeddingInstance?.embed(chunkToInsert)) ??
 						Array<number>(vectorManager.size).fill(0),
 				);
 

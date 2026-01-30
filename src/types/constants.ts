@@ -1,4 +1,4 @@
-export const CHUNK_SIZE = 512;
+export const CHUNK_SIZE = 128;
 export const DECISIONS_BLOCK_SIZE = 1000;
 export const DECISIONS_BLOCKS_COUNT = 10;
 

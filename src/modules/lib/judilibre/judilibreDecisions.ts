@@ -359,6 +359,7 @@ export class JudilibreDecisions extends JudilibreDecisionsBase {
 			id: decision.id,
 			date: decision.decisionDate,
 			jurisdiction: decision.jurisdiction,
+			location: decision.location ?? decision.jurisdiction,
 			chamber: decision.chamber || "",
 			number: decision.number || "unknown",
 		};
@@ -366,11 +367,11 @@ export class JudilibreDecisions extends JudilibreDecisionsBase {
 			id: decision.id,
 			date: decision.decisionDate,
 			jurisdiction: decision.jurisdiction,
+			location: decision.location ?? decision.jurisdiction,
 			chamber: decision.chamber || "",
 			number: decision.number || "unknown",
 		};
 
-		if (decision.location) dataToInsert.location = decision.location as string;
 		dataToInsert.themes =
 			decision.themes && decision.themes.length > 0 ? decision.themes : [];
 
@@ -504,6 +505,8 @@ export class JudilibreDecisions extends JudilibreDecisionsBase {
 			default:
 				return;
 		}
+
+		sentences = sentences.map((sentence) => `passage: ${sentence.trim()}`);
 
 		const embeddings: number[][] =
 			await this.embeddingInstance.embedBatch(sentences);
