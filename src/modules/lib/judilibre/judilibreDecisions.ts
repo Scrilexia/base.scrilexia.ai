@@ -498,6 +498,7 @@ export class JudilibreDecisions extends JudilibreDecisionsBase {
 	): Promise<void> {
 		let sentences: string[] = [];
 		switch (zone) {
+			case "text":
 			case "motivations":
 			case "summary":
 				sentences = await splitTextWithtokens(text, CHUNK_SIZE);
@@ -505,6 +506,7 @@ export class JudilibreDecisions extends JudilibreDecisionsBase {
 			default:
 				return;
 		}
+
 		console.log(
 			`\t\t- ${sentences.length} sentences to embed length max: ${Math.max(...sentences.map((s) => s.length))}`,
 		);
