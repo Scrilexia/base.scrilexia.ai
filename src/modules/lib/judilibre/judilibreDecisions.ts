@@ -505,7 +505,9 @@ export class JudilibreDecisions extends JudilibreDecisionsBase {
 			default:
 				return;
 		}
-
+		console.log(
+			`\t\t- ${sentences.length} sentences to embed length max: ${Math.max(...sentences.map((s) => s.length))}`,
+		);
 		const sentencesToInsert = sentences.map(
 			(sentence) => `passage: ${sentence.trim()}`,
 		);
