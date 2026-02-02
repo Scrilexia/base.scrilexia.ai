@@ -84,8 +84,8 @@ export class LegiFranceLaws extends LegiFranceBase {
 			}
 		}
 
-		legiFranceCodeOrLawRepository.disconnect();
-		legiFranceArticleRepository.disconnect();
+		await legiFranceCodeOrLawRepository.disconnect();
+		await legiFranceArticleRepository.disconnect();
 	}
 
 	async buildTrainingDataset(): Promise<string> {

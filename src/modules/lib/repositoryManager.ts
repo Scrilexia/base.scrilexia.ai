@@ -6,7 +6,7 @@ import {
 } from "../database/manager.js";
 
 export class BaseRepository {
-	protected client: IDatabase;
+	protected client: IDatabase | undefined;
 	protected host: string;
 	protected port: number;
 	protected user: string;
@@ -14,7 +14,7 @@ export class BaseRepository {
 	protected dbName: string;
 
 	constructor() {
-		this.client = undefined as unknown as IDatabase;
+		this.client = undefined;
 		const host = getEnvValue("dbLfHost");
 		if (!host) {
 			throw new Error("Database host is not defined in environment variables.");
@@ -72,7 +72,7 @@ export class BaseRepository {
 	}
 
 	protected connect() {
-		if (this.client) {
+		if (this.client !== undefined) {
 			return;
 		}
 
@@ -86,9 +86,9 @@ export class BaseRepository {
 	}
 
 	async disconnect(): Promise<void> {
-		if (this.client) {
+		if (this.client !== undefined) {
 			await this.client.close();
-			this.client = undefined as unknown as IDatabase;
+			this.client = undefined;
 		}
 	}
 }

@@ -40,7 +40,7 @@ class LegiFranceCodeOrLawRepository extends BaseRepository {
 		await this.initializeClient();
 		this.connect();
 
-		if (!(await this.client.tableExists("lf_code_law"))) {
+		if (!(await this.client?.tableExists("lf_code_law"))) {
 			const schema = new Schema();
 			schema.addColumn("id", "VARCHAR(60) PRIMARY KEY NOT NULL");
 			schema.addColumn("title", "TEXT NOT NULL");
@@ -48,10 +48,10 @@ class LegiFranceCodeOrLawRepository extends BaseRepository {
 			schema.addColumn("state", "VARCHAR(30) NOT NULL");
 			schema.addColumn("start_date", "DATETIME");
 			schema.addColumn("end_date", "DATETIME");
-			await this.client.createTable("lf_code_law", schema);
+			await this.client?.createTable("lf_code_law", schema);
 		}
 
-		this.disconnect();
+		await this.disconnect();
 	}
 
 	// CRUD methods for code would go here
@@ -59,7 +59,7 @@ class LegiFranceCodeOrLawRepository extends BaseRepository {
 	async create(code: LegiFranceCode): Promise<void> {
 		this.connect();
 
-		await this.client.query<Result>(
+		await this.client?.query<Result>(
 			"INSERT INTO lf_code_law (id, title, title_full, state, start_date, end_date) VALUES (?, ?, ?, ?, ?, ?)",
 			[
 				code.id,
@@ -70,18 +70,18 @@ class LegiFranceCodeOrLawRepository extends BaseRepository {
 				code.endDate,
 			],
 		);
-		this.disconnect();
+		await this.disconnect();
 	}
 	// read
 	async read(id: string): Promise<LegiFranceCode | null> {
 		this.connect();
 
-		const [rows] = await this.client.query<Rows>(
+		const [rows] = (await this.client?.query<Rows>(
 			"SELECT * FROM lf_code_law WHERE id = ?",
 			[id],
-		);
+		)) ?? [[]];
 
-		this.disconnect();
+		await this.disconnect();
 
 		if (rows.length === 0) {
 			return null;
@@ -101,11 +101,11 @@ class LegiFranceCodeOrLawRepository extends BaseRepository {
 	async readAll(): Promise<LegiFranceCode[]> {
 		this.connect();
 
-		const [rows] = await this.client.query<Rows>(
+		const [rows] = (await this.client?.query<Rows>(
 			"SELECT * FROM lf_code_law ORDER BY start_date DESC",
-		);
+		)) ?? [[]];
 
-		this.disconnect();
+		await this.disconnect();
 
 		return rows.map((row) => ({
 			id: row.id,
@@ -120,10 +120,10 @@ class LegiFranceCodeOrLawRepository extends BaseRepository {
 	async readAllLaws(): Promise<LegiFranceCode[]> {
 		this.connect();
 
-		const [rows] = await this.client.query<Rows>(
+		const [rows] = (await this.client?.query<Rows>(
 			"SELECT * FROM lf_code_law WHERE title LIKE 'LOI n° %' ORDER BY start_date DESC",
-		);
-		this.disconnect();
+		)) ?? [[]];
+		await this.disconnect();
 
 		return rows.map((row) => ({
 			id: row.id,
@@ -140,12 +140,12 @@ class LegiFranceCodeOrLawRepository extends BaseRepository {
 
 		const arrayTitle = title.split(" ");
 		const modifiedTitle = arrayTitle.join("%");
-		const [rows] = await this.client.query<Rows>(
+		const [rows] = (await this.client?.query<Rows>(
 			"SELECT * FROM lf_code_law WHERE title LIKE ?",
 			[modifiedTitle],
-		);
+		)) ?? [[]];
 
-		this.disconnect();
+		await this.disconnect();
 
 		return rows.map((row) => ({
 			id: row.id,
@@ -161,26 +161,26 @@ class LegiFranceCodeOrLawRepository extends BaseRepository {
 	async update(code: LegiFranceCode): Promise<void> {
 		this.connect();
 
-		await this.client.query(
+		await this.client?.query(
 			"UPDATE lf_code_law SET title = ?, state = ?, start_date = ?, end_date = ? WHERE id = ?",
 			[code.title, code.state, code.startDate, code.endDate, code.id],
 		);
 
-		this.disconnect();
+		await this.disconnect();
 	}
 
 	// delete
 	async delete(id: string): Promise<void> {
 		this.connect();
 
-		await this.client.query("DELETE FROM lf_code_law WHERE id = ?", [id]);
-		this.disconnect();
+		await this.client?.query("DELETE FROM lf_code_law WHERE id = ?", [id]);
+		await this.disconnect();
 	}
 
 	async deleteTable(): Promise<void> {
 		this.connect();
-		await this.client.deleteTable("lf_code_law");
-		this.disconnect();
+		await this.client?.deleteTable("lf_code_law");
+		await this.disconnect();
 	}
 }
 
@@ -202,7 +202,7 @@ export class LegiFranceArticleRepository extends BaseRepository {
 		await this.initializeClient();
 		this.connect();
 
-		if (!(await this.client.tableExists("lf_article"))) {
+		if (!(await this.client?.tableExists("lf_article"))) {
 			const schema = new Schema();
 			schema.addColumn("id", "VARCHAR(60) PRIMARY KEY NOT NULL");
 			schema.addColumn("code_id", "VARCHAR(60) NOT NULL");
@@ -212,9 +212,9 @@ export class LegiFranceArticleRepository extends BaseRepository {
 			schema.addColumn("start_date", "DATETIME");
 			schema.addColumn("end_date", "DATETIME");
 			schema.addForeignKeyConstraint("code_id", "lf_code_law", "id", "DELETE");
-			await this.client.createTable("lf_article", schema);
+			await this.client?.createTable("lf_article", schema);
 		}
-		this.disconnect();
+		await this.disconnect();
 	}
 
 	// CRUD methods for code articles would go here
@@ -222,7 +222,7 @@ export class LegiFranceArticleRepository extends BaseRepository {
 	async create(article: LegiFranceCodeArticle): Promise<void> {
 		this.connect();
 
-		await this.client.query<Result>(
+		await this.client?.query<Result>(
 			"INSERT INTO lf_article (id, code_id, number, text, state, start_date, end_date) VALUES (?, ?, ?, ?, ?, ?, ?)",
 			[
 				article.id,
@@ -234,17 +234,17 @@ export class LegiFranceArticleRepository extends BaseRepository {
 				article.endDate,
 			],
 		);
-		this.disconnect();
+		await this.disconnect();
 	}
 
 	// read
 	async read(id: string): Promise<LegiFranceCodeArticle | null> {
 		this.connect();
-		const [rows] = await this.client.query<Rows>(
+		const [rows] = (await this.client?.query<Rows>(
 			"SELECT * FROM lf_article WHERE id = ?",
 			[id],
-		);
-		this.disconnect();
+		)) ?? [[]];
+		await this.disconnect();
 
 		if (rows.length === 0) {
 			return null;
@@ -263,11 +263,11 @@ export class LegiFranceArticleRepository extends BaseRepository {
 
 	async readAllByCodeId(codeId: string): Promise<LegiFranceCodeArticle[]> {
 		this.connect();
-		const [rows] = await this.client.query<Rows>(
+		const [rows] = (await this.client?.query<Rows>(
 			"SELECT * FROM lf_article WHERE code_id = ?",
 			[codeId],
-		);
-		this.disconnect();
+		)) ?? [[]];
+		await this.disconnect();
 
 		return rows.map((row) => ({
 			id: row.id,
@@ -285,11 +285,11 @@ export class LegiFranceArticleRepository extends BaseRepository {
 		codeId: string,
 	): Promise<LegiFranceCodeArticle | null> {
 		this.connect();
-		const [rows] = await this.client.query<Rows>(
+		const [rows] = (await this.client?.query<Rows>(
 			"SELECT * FROM lf_article WHERE id = ? AND code_id = ?",
 			[id, codeId],
-		);
-		this.disconnect();
+		)) ?? [[]];
+		await this.disconnect();
 
 		if (rows.length === 0) {
 			return null;
@@ -311,13 +311,13 @@ export class LegiFranceArticleRepository extends BaseRepository {
 		codeTitle: string,
 	): Promise<LegiFranceCodeArticle | null> {
 		this.connect();
-		const [rows] = await this.client.query<Rows>(
+		const [rows] = (await this.client?.query<Rows>(
 			`SELECT ar.* FROM lf_article ar
              INNER JOIN lf_code_law co ON ar.code_id = co.id
              WHERE ar.number = ? AND co.title = ?`,
 			[articleNumber, codeTitle],
-		);
-		this.disconnect();
+		)) ?? [[]];
+		await this.disconnect();
 
 		if (rows.length === 0) {
 			return null;
@@ -338,7 +338,7 @@ export class LegiFranceArticleRepository extends BaseRepository {
 	async update(article: LegiFranceCodeArticle): Promise<void> {
 		this.connect();
 
-		await this.client.query<Result>(
+		await this.client?.query<Result>(
 			"UPDATE lf_article SET code_id = ?, number = ?, text = ?, state = ?, start_date = ?, end_date = ? WHERE id = ?",
 			[
 				article.codeId,
@@ -350,22 +350,22 @@ export class LegiFranceArticleRepository extends BaseRepository {
 				article.id,
 			],
 		);
-		this.disconnect();
+		await this.disconnect();
 	}
 
 	// delete
 	async delete(id: string): Promise<void> {
 		this.connect();
-		await this.client.query<Result>("DELETE FROM lf_article WHERE id = ?", [
+		await this.client?.query<Result>("DELETE FROM lf_article WHERE id = ?", [
 			id,
 		]);
-		this.disconnect();
+		await this.disconnect();
 	}
 
 	async deleteTable(): Promise<void> {
 		this.connect();
-		await this.client.deleteTable("lf_article");
-		this.disconnect();
+		await this.client?.deleteTable("lf_article");
+		await this.disconnect();
 	}
 }
 

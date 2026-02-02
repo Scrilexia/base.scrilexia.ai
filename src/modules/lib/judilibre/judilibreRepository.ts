@@ -45,7 +45,9 @@ export class JudilibreRepository extends BaseRepository {
 		await this.initializeClient();
 		this.connect();
 
-		if (!(await this.client.tableExists(`jdl_decision_${this.jurisdiction}`))) {
+		if (
+			!(await this.client?.tableExists(`jdl_decision_${this.jurisdiction}`))
+		) {
 			const schema = new Schema();
 			schema.addColumn("id", "VARCHAR(60) PRIMARY KEY NOT NULL");
 			schema.addColumn("jurisdiction", "TEXT NOT NULL");
@@ -60,11 +62,13 @@ export class JudilibreRepository extends BaseRepository {
 			schema.addColumn("summary", "TEXT NOT NULL");
 			schema.addColumn("themes", "JSON NOT NULL");
 			schema.addColumn("visas", "JSON NOT NULL");
-			await this.client.createTable(
+			await this.client?.createTable(
 				`jdl_decision_${this.jurisdiction}`,
 				schema,
 			);
 		}
+
+		await this.disconnect();
 	}
 
 	// CRUD methods for code would go here
@@ -72,7 +76,7 @@ export class JudilibreRepository extends BaseRepository {
 	async create(decision: JudilibreDecision): Promise<void> {
 		this.connect();
 
-		await this.client.query<Result>(
+		await this.client?.query<Result>(
 			`INSERT INTO jdl_decision_${this.jurisdiction} (id, jurisdiction, location, chamber, number, decision_date, type, text, motivations, solution, summary, themes, visas)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			[
@@ -91,18 +95,19 @@ export class JudilibreRepository extends BaseRepository {
 				JSON.stringify(decision.visas),
 			],
 		);
+		await this.disconnect();
 	}
 
 	// read
 	async read(id: string): Promise<JudilibreDecision | null> {
 		this.connect();
 
-		const [rows] = await this.client.query<Rows>(
+		const [rows] = (await this.client?.query<Rows>(
 			`SELECT * FROM jdl_decision_${this.jurisdiction} WHERE id = ?`,
 			[id],
-		);
+		)) ?? [[]];
 
-		this.disconnect();
+		await this.disconnect();
 
 		if (rows.length === 0) {
 			return null;
@@ -129,12 +134,12 @@ export class JudilibreRepository extends BaseRepository {
 	async readAll(offset: number, size: number): Promise<JudilibreDecision[]> {
 		this.connect();
 
-		const [rows] = await this.client.query<Rows>(
+		const [rows] = (await this.client?.query<Rows>(
 			`SELECT * FROM jdl_decision_${this.jurisdiction} ORDER BY decision_date DESC LIMIT ? OFFSET ?`,
 			[size, offset],
-		);
+		)) ?? [[]];
 
-		this.disconnect();
+		await this.disconnect();
 
 		return rows.map((row) => ({
 			id: row.id,
@@ -159,16 +164,16 @@ export class JudilibreRepository extends BaseRepository {
 	): Promise<JudilibreDecision[]> {
 		this.connect();
 
-		const [rows] = await this.client.query<Rows>(
+		const [rows] = (await this.client?.query<Rows>(
 			`SELECT id, jurisdiction, location, chamber, number, decision_date, type, text, motivations, solution, summary, themes, visas 
 			 FROM jdl_decision_${this.jurisdiction} 
 			 WHERE JSON_LENGTH(themes) > 0 AND JSON_LENGTH(visas) > 0 AND summary IS NOT NULL AND summary <> ""
 			 ORDER BY decision_date DESC
 			 LIMIT ? OFFSET ?`,
 			[size, offset],
-		);
+		)) ?? [[]];
 
-		this.disconnect();
+		await this.disconnect();
 
 		return rows.map((row) => ({
 			id: row.id,
@@ -191,11 +196,11 @@ export class JudilibreRepository extends BaseRepository {
 	async count(): Promise<number> {
 		this.connect();
 
-		const [rows] = await this.client.query<Rows>(
+		const [rows] = (await this.client?.query<Rows>(
 			`SELECT COUNT(*) as count FROM jdl_decision_${this.jurisdiction}`,
-		);
+		)) ?? [[]];
 
-		this.disconnect();
+		await this.disconnect();
 
 		return rows[0].count;
 	}
@@ -203,13 +208,12 @@ export class JudilibreRepository extends BaseRepository {
 	async countForThemesVisasAndSummary(): Promise<number> {
 		this.connect();
 
-		const [rows] = await this.client.query<Rows>(
+		const [rows] = (await this.client?.query<Rows>(
 			`SELECT COUNT(*) as count 
 			 FROM jdl_decision_${this.jurisdiction} 
 			 WHERE (JSON_LENGTH(themes) > 0 AND JSON_LENGTH(visas) > 0 AND summary IS NOT NULL AND summary != '')`,
-		);
-
-		this.disconnect();
+		)) ?? [[]];
+		await this.disconnect();
 
 		return rows[0].count;
 	}
@@ -233,12 +237,12 @@ export class JudilibreRepository extends BaseRepository {
 			values.push(number);
 		}
 
-		const [rows] = await this.client.query<Rows>(
+		const [rows] = (await this.client?.query<Rows>(
 			`SELECT * FROM jdl_decision_${this.jurisdiction} WHERE ${parameters.join(" AND ")} ORDER BY decision_date DESC`,
 			values,
-		);
+		)) ?? [[]];
 
-		this.disconnect();
+		await this.disconnect();
 
 		return rows.map((row) => ({
 			id: row.id,
@@ -277,12 +281,12 @@ export class JudilibreRepository extends BaseRepository {
 			values.push(number);
 		}
 
-		const [rows] = await this.client.query<Rows>(
+		const [rows] = (await this.client?.query<Rows>(
 			`SELECT * FROM jdl_decision_${this.jurisdiction} WHERE ${parameters.join(" AND ")} ORDER BY decision_date DESC`,
 			values,
-		);
+		)) ?? [[]];
 
-		this.disconnect();
+		await this.disconnect();
 
 		return rows.map((row) => ({
 			id: row.id,
@@ -305,7 +309,7 @@ export class JudilibreRepository extends BaseRepository {
 	async update(decision: JudilibreDecision): Promise<void> {
 		this.connect();
 
-		await this.client.query(
+		await this.client?.query(
 			`UPDATE jdl_decision_${this.jurisdiction} 
              SET jurisdiction = ?, location = ?, chamber = ?, number = ?, decision_date = ?, type = ?, text = ?, motivations = ?, solution = ?, summary = ?, themes = ?, visas = ?
              WHERE id = ?`,
@@ -325,24 +329,24 @@ export class JudilibreRepository extends BaseRepository {
 				JSON.stringify(decision.visas),
 			],
 		);
-		this.disconnect();
+		await this.disconnect();
 	}
 
 	// delete
 	async delete(id: string): Promise<void> {
 		this.connect();
 
-		await this.client.query(
+		await this.client?.query(
 			`DELETE FROM jdl_decision_${this.jurisdiction} WHERE id = ?`,
 			[id],
 		);
-		this.disconnect();
+		await this.disconnect();
 	}
 
 	// delete Table
 	async deleteTable(): Promise<void> {
 		this.connect();
-		await this.client.deleteTable(`jdl_decision_${this.jurisdiction}`);
-		this.disconnect();
+		await this.client?.deleteTable(`jdl_decision_${this.jurisdiction}`);
+		await this.disconnect();
 	}
 }
