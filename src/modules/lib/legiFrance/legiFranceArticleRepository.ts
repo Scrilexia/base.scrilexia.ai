@@ -50,6 +50,8 @@ class LegiFranceCodeOrLawRepository extends BaseRepository {
 			schema.addColumn("end_date", "DATETIME");
 			await this.client.createTable("lf_code_law", schema);
 		}
+
+		this.disconnect();
 	}
 
 	// CRUD methods for code would go here
@@ -68,8 +70,8 @@ class LegiFranceCodeOrLawRepository extends BaseRepository {
 				code.endDate,
 			],
 		);
+		this.disconnect();
 	}
-
 	// read
 	async read(id: string): Promise<LegiFranceCode | null> {
 		this.connect();
@@ -78,6 +80,8 @@ class LegiFranceCodeOrLawRepository extends BaseRepository {
 			"SELECT * FROM lf_code_law WHERE id = ?",
 			[id],
 		);
+
+		this.disconnect();
 
 		if (rows.length === 0) {
 			return null;
@@ -100,6 +104,9 @@ class LegiFranceCodeOrLawRepository extends BaseRepository {
 		const [rows] = await this.client.query<Rows>(
 			"SELECT * FROM lf_code_law ORDER BY start_date DESC",
 		);
+
+		this.disconnect();
+
 		return rows.map((row) => ({
 			id: row.id,
 			title: row.title,
@@ -116,6 +123,8 @@ class LegiFranceCodeOrLawRepository extends BaseRepository {
 		const [rows] = await this.client.query<Rows>(
 			"SELECT * FROM lf_code_law WHERE title LIKE 'LOI n° %' ORDER BY start_date DESC",
 		);
+		this.disconnect();
+
 		return rows.map((row) => ({
 			id: row.id,
 			title: row.title,
@@ -135,6 +144,9 @@ class LegiFranceCodeOrLawRepository extends BaseRepository {
 			"SELECT * FROM lf_code_law WHERE title LIKE ?",
 			[modifiedTitle],
 		);
+
+		this.disconnect();
+
 		return rows.map((row) => ({
 			id: row.id,
 			title: row.title,
@@ -153,6 +165,8 @@ class LegiFranceCodeOrLawRepository extends BaseRepository {
 			"UPDATE lf_code_law SET title = ?, state = ?, start_date = ?, end_date = ? WHERE id = ?",
 			[code.title, code.state, code.startDate, code.endDate, code.id],
 		);
+
+		this.disconnect();
 	}
 
 	// delete
@@ -160,11 +174,13 @@ class LegiFranceCodeOrLawRepository extends BaseRepository {
 		this.connect();
 
 		await this.client.query("DELETE FROM lf_code_law WHERE id = ?", [id]);
+		this.disconnect();
 	}
 
 	async deleteTable(): Promise<void> {
 		this.connect();
 		await this.client.deleteTable("lf_code_law");
+		this.disconnect();
 	}
 }
 
@@ -198,6 +214,7 @@ export class LegiFranceArticleRepository extends BaseRepository {
 			schema.addForeignKeyConstraint("code_id", "lf_code_law", "id", "DELETE");
 			await this.client.createTable("lf_article", schema);
 		}
+		this.disconnect();
 	}
 
 	// CRUD methods for code articles would go here
@@ -217,6 +234,7 @@ export class LegiFranceArticleRepository extends BaseRepository {
 				article.endDate,
 			],
 		);
+		this.disconnect();
 	}
 
 	// read
@@ -226,6 +244,8 @@ export class LegiFranceArticleRepository extends BaseRepository {
 			"SELECT * FROM lf_article WHERE id = ?",
 			[id],
 		);
+		this.disconnect();
+
 		if (rows.length === 0) {
 			return null;
 		}
@@ -247,6 +267,8 @@ export class LegiFranceArticleRepository extends BaseRepository {
 			"SELECT * FROM lf_article WHERE code_id = ?",
 			[codeId],
 		);
+		this.disconnect();
+
 		return rows.map((row) => ({
 			id: row.id,
 			codeId: row.code_id,
@@ -267,6 +289,7 @@ export class LegiFranceArticleRepository extends BaseRepository {
 			"SELECT * FROM lf_article WHERE id = ? AND code_id = ?",
 			[id, codeId],
 		);
+		this.disconnect();
 
 		if (rows.length === 0) {
 			return null;
@@ -294,6 +317,7 @@ export class LegiFranceArticleRepository extends BaseRepository {
              WHERE ar.number = ? AND co.title = ?`,
 			[articleNumber, codeTitle],
 		);
+		this.disconnect();
 
 		if (rows.length === 0) {
 			return null;
@@ -326,6 +350,7 @@ export class LegiFranceArticleRepository extends BaseRepository {
 				article.id,
 			],
 		);
+		this.disconnect();
 	}
 
 	// delete
@@ -334,11 +359,13 @@ export class LegiFranceArticleRepository extends BaseRepository {
 		await this.client.query<Result>("DELETE FROM lf_article WHERE id = ?", [
 			id,
 		]);
+		this.disconnect();
 	}
 
 	async deleteTable(): Promise<void> {
 		this.connect();
 		await this.client.deleteTable("lf_article");
+		this.disconnect();
 	}
 }
 

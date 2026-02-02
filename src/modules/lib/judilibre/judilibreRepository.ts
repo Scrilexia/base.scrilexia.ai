@@ -101,6 +101,9 @@ export class JudilibreRepository extends BaseRepository {
 			`SELECT * FROM jdl_decision_${this.jurisdiction} WHERE id = ?`,
 			[id],
 		);
+
+		this.disconnect();
+
 		if (rows.length === 0) {
 			return null;
 		}
@@ -130,6 +133,8 @@ export class JudilibreRepository extends BaseRepository {
 			`SELECT * FROM jdl_decision_${this.jurisdiction} ORDER BY decision_date DESC LIMIT ? OFFSET ?`,
 			[size, offset],
 		);
+
+		this.disconnect();
 
 		return rows.map((row) => ({
 			id: row.id,
@@ -163,6 +168,8 @@ export class JudilibreRepository extends BaseRepository {
 			[size, offset],
 		);
 
+		this.disconnect();
+
 		return rows.map((row) => ({
 			id: row.id,
 			jurisdiction: row.jurisdiction,
@@ -188,6 +195,8 @@ export class JudilibreRepository extends BaseRepository {
 			`SELECT COUNT(*) as count FROM jdl_decision_${this.jurisdiction}`,
 		);
 
+		this.disconnect();
+
 		return rows[0].count;
 	}
 
@@ -199,6 +208,8 @@ export class JudilibreRepository extends BaseRepository {
 			 FROM jdl_decision_${this.jurisdiction} 
 			 WHERE (JSON_LENGTH(themes) > 0 AND JSON_LENGTH(visas) > 0 AND summary IS NOT NULL AND summary != '')`,
 		);
+
+		this.disconnect();
 
 		return rows[0].count;
 	}
@@ -226,6 +237,8 @@ export class JudilibreRepository extends BaseRepository {
 			`SELECT * FROM jdl_decision_${this.jurisdiction} WHERE ${parameters.join(" AND ")} ORDER BY decision_date DESC`,
 			values,
 		);
+
+		this.disconnect();
 
 		return rows.map((row) => ({
 			id: row.id,
@@ -269,6 +282,8 @@ export class JudilibreRepository extends BaseRepository {
 			values,
 		);
 
+		this.disconnect();
+
 		return rows.map((row) => ({
 			id: row.id,
 			jurisdiction: row.jurisdiction,
@@ -310,6 +325,7 @@ export class JudilibreRepository extends BaseRepository {
 				JSON.stringify(decision.visas),
 			],
 		);
+		this.disconnect();
 	}
 
 	// delete
@@ -320,11 +336,13 @@ export class JudilibreRepository extends BaseRepository {
 			`DELETE FROM jdl_decision_${this.jurisdiction} WHERE id = ?`,
 			[id],
 		);
+		this.disconnect();
 	}
 
 	// delete Table
 	async deleteTable(): Promise<void> {
 		this.connect();
 		await this.client.deleteTable(`jdl_decision_${this.jurisdiction}`);
+		this.disconnect();
 	}
 }
