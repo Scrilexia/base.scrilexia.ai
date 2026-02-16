@@ -70,32 +70,61 @@ class DatabaseQuery implements IDatabaseQuery {
 }
 
 class DatabaseClient extends DatabaseQuery implements IDatabase {
+	private connectDatabase: () => DbClient;
+	constructor(connectDatabase: () => DbClient) {
+		super(connectDatabase());
+		this.connectDatabase = connectDatabase;
+	}
+
 	async tableExists(name: string): Promise<boolean> {
 		console.debug(`Checking if table exists: ${name}`);
 		console.debug(`Client: ${this.client}`);
 
-		if (!this.client) {
-			console.log("Database client is not established.");
-			return false;
-		}
+		let rows: Rows = [];
+		let tries = 0;
+		const maxRetries = 3;
+		while (tries < maxRetries) {
+			try {
+				if (!this.client) {
+					this.client = this.connectDatabase();
+				}
 
-		const [rows] = await this.client.query<Rows>(
-			"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = ?",
-			[name],
-		);
+				[rows] = await this.client.query<Rows>(
+					"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = ?",
+					[name],
+				);
+			} catch (error) {
+				console.error("Error in checking table existence:", error);
+				tries++;
+				console.debug(`Retrying... (${tries}/${maxRetries})`);
+				this.client = this.connectDatabase();
+			}
+		}
 		return rows.length > 0;
 	}
 
 	async createTable(name: string, schema: Schema): Promise<void> {
-		if (!this.client) {
-			throw new Error("Database client is not established.");
+		let tries = 0;
+		const maxRetries = 3;
+		while (tries < maxRetries) {
+			try {
+				if (!this.client) {
+					this.client = this.connectDatabase();
+				}
+
+				await this.deleteTable(name);
+
+				const tableName = this.sanitizeIdentifier(name);
+				const query = `CREATE TABLE ${tableName} (${schema.toString()}) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci`;
+				await this.client.query<Result>(query);
+				break;
+			} catch (error) {
+				console.error("Error in creating table:", error);
+				tries++;
+				console.debug(`Retrying... (${tries}/${maxRetries})`);
+				this.client = this.connectDatabase();
+			}
 		}
-
-		await this.deleteTable(name);
-
-		const tableName = this.sanitizeIdentifier(name);
-		const query = `CREATE TABLE ${tableName} (${schema.toString()}) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci`;
-		await this.client.query<Result>(query);
 	}
 
 	async deleteTable(name: string): Promise<void> {
@@ -103,12 +132,22 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 			return;
 		}
 
-		if (!this.client) {
-			throw new Error("Database client is not established.");
+		let tries = 0;
+		const maxRetries = 3;
+		while (tries < maxRetries) {
+			try {
+				if (!this.client) {
+					this.client = this.connectDatabase();
+				}
+				const tableName = this.sanitizeIdentifier(name);
+				await this.client.query(`DROP TABLE IF EXISTS ${tableName}`);
+			} catch (error) {
+				console.error("Error in deleting table:", error);
+				tries++;
+				console.debug(`Retrying... (${tries}/${maxRetries})`);
+				this.client = this.connectDatabase();
+			}
 		}
-
-		const tableName = this.sanitizeIdentifier(name);
-		await this.client.query(`DROP TABLE IF EXISTS ${tableName}`);
 	}
 }
 
@@ -207,15 +246,15 @@ export function openDatabase(
 	password: string,
 	database: string,
 ): IDatabase {
-	const client = mysql.createPool({
-		host,
-		port,
-		user,
-		password,
-		database,
-	});
-
-	return new DatabaseClient(client);
+	return new DatabaseClient(() =>
+		mysql.createPool({
+			host,
+			port,
+			user,
+			password,
+			database,
+		}),
+	);
 }
 
 export async function openConnection(
