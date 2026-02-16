@@ -57,9 +57,7 @@ class DatabaseQuery implements IDatabaseQuery {
 			console.debug("Closing database client connection.");
 			await this.client.end();
 			this.client = undefined;
-			console.debug(
-				`Client: ${this.client ? Object.getOwnPropertySymbols(this.client) : "undefined"}`,
-			);
+			console.debug(`Client: ${this.client}`);
 		}
 	}
 
