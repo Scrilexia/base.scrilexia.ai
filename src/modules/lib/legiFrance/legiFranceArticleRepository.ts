@@ -45,7 +45,7 @@ class LegiFranceCodeOrLawRepository extends BaseRepository {
 			return;
 		}
 
-		if (!(await this.client?.tableExists("lf_code_law"))) {
+		if (!(await this.client.tableExists("lf_code_law"))) {
 			const schema = new Schema();
 			schema.addColumn("id", "VARCHAR(60) PRIMARY KEY NOT NULL");
 			schema.addColumn("title", "TEXT NOT NULL");
@@ -53,7 +53,7 @@ class LegiFranceCodeOrLawRepository extends BaseRepository {
 			schema.addColumn("state", "VARCHAR(30) NOT NULL");
 			schema.addColumn("start_date", "DATETIME");
 			schema.addColumn("end_date", "DATETIME");
-			await this.client?.createTable("lf_code_law", schema);
+			await this.client.createTable("lf_code_law", schema);
 		}
 
 		await this.disconnect();

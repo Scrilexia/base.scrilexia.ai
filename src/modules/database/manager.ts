@@ -75,7 +75,8 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 		console.debug(`Client: ${this.client}`);
 
 		if (!this.client) {
-			throw new Error("Database client is not established.");
+			console.log("Database client is not established.");
+			return false;
 		}
 
 		const [rows] = await this.client.query<Rows>(
