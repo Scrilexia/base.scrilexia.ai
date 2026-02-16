@@ -35,8 +35,8 @@ export interface IDatabase extends IDatabaseQuery {
 }
 
 class DatabaseQuery implements IDatabaseQuery {
-	protected client: DbClient | DbConnection;
-	constructor(client: DbClient | DbConnection) {
+	protected client: DbClient | DbConnection | undefined;
+	constructor(client: DbClient | DbConnection | undefined) {
 		this.client = client;
 	}
 
@@ -55,7 +55,7 @@ class DatabaseQuery implements IDatabaseQuery {
 	async close(): Promise<void> {
 		if (this.client) {
 			await this.client.end();
-			this.client = undefined as unknown as DbClient | DbConnection;
+			this.client = undefined;
 		}
 	}
 
@@ -93,12 +93,12 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 	}
 
 	async deleteTable(name: string): Promise<void> {
-		if (!this.client) {
-			throw new Error("Database client is not established.");
-		}
-
 		if (!(await this.tableExists(name))) {
 			return;
+		}
+
+		if (!this.client) {
+			throw new Error("Database client is not established.");
 		}
 
 		const tableName = this.sanitizeIdentifier(name);
