@@ -57,7 +57,9 @@ class DatabaseQuery implements IDatabaseQuery {
 			console.debug("Closing database client connection.");
 			await this.client.end();
 			this.client = undefined;
-			console.debug(`Client: ${Object.getOwnPropertySymbols(this.client)}`);
+			console.debug(
+				`Client: ${this.client ? Object.getOwnPropertySymbols(this.client) : undefined}`,
+			);
 		}
 	}
 
@@ -72,7 +74,9 @@ class DatabaseQuery implements IDatabaseQuery {
 class DatabaseClient extends DatabaseQuery implements IDatabase {
 	async tableExists(name: string): Promise<boolean> {
 		console.debug(`Checking if table exists: ${name}`);
-		console.debug(`client: ${Object.getOwnPropertySymbols(this.client)}`);
+		console.debug(
+			`client: ${this.client ? Object.getOwnPropertySymbols(this.client) : undefined}`,
+		);
 
 		if (!this.client) {
 			throw new Error("Database client is not established.");
