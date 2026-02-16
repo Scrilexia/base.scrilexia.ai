@@ -45,6 +45,11 @@ export class JudilibreRepository extends BaseRepository {
 		await this.initializeClient();
 		this.connect();
 
+		if (!this.client) {
+			console.warn("Database client is not initialized.");
+			return;
+		}
+
 		if (
 			!(await this.client?.tableExists(`jdl_decision_${this.jurisdiction}`))
 		) {
