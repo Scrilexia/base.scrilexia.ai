@@ -54,10 +54,8 @@ class DatabaseQuery implements IDatabaseQuery {
 
 	async close(): Promise<void> {
 		if (this.client) {
-			console.debug("Closing database client connection.");
 			await this.client.end();
 			this.client = undefined;
-			console.debug(`Client: ${this.client}`);
 		}
 	}
 
