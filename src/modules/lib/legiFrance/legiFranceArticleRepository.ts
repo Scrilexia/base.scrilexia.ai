@@ -40,6 +40,11 @@ class LegiFranceCodeOrLawRepository extends BaseRepository {
 		await this.initializeClient();
 		this.connect();
 
+		if (!this.client) {
+			console.warn("Database client is not initialized.");
+			return;
+		}
+
 		if (!(await this.client?.tableExists("lf_code_law"))) {
 			const schema = new Schema();
 			schema.addColumn("id", "VARCHAR(60) PRIMARY KEY NOT NULL");
