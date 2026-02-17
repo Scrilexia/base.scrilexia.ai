@@ -69,8 +69,6 @@ class DatabaseQuery implements IDatabaseQuery {
 		throw new Error("Method not implemented.");
 	}
 
-	protected async testConnection(): Promise<void> {}
-
 	protected async trySeveralTimes<T>(
 		functionSyncOrAsync: SyncOrAsyncFunction<T>,
 		catchError: () => Promise<void>,
@@ -84,7 +82,7 @@ class DatabaseQuery implements IDatabaseQuery {
 				console.error("Database error:", error);
 				tries++;
 				console.debug(`Retrying... (${tries}/${maxRetries})`);
-				catchError();
+				await catchError();
 			}
 		}
 		throw new Error("Maximum retry attempts reached.");
@@ -136,16 +134,6 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 		});
 	}
 
-	protected override async testConnection(): Promise<void> {
-		if (!this.client) {
-			this.client = await this.initializeClient();
-		}
-
-		const client = this.client as DbClient;
-		const connection = await client.getConnection();
-		connection.release();
-	}
-
 	async query<T extends QueryResult>(
 		sql: string,
 		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
@@ -153,8 +141,6 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 	): Promise<[T, mysql.FieldPacket[]]> {
 		return await this.trySeveralTimes(
 			async () => {
-				await this.testConnection();
-
 				if (!this.client) {
 					this.client = await this.initializeClient();
 				}
@@ -162,6 +148,10 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 				return await this.client.query<T>(sql, params);
 			},
 			async () => {
+				if (this.client) {
+					await this.client.end();
+				}
+
 				this.client = await this.initializeClient();
 			},
 		);
@@ -172,8 +162,6 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 
 		[rows] = await this.trySeveralTimes(
 			async () => {
-				await this.testConnection();
-
 				if (!this.client) {
 					this.client = await this.initializeClient();
 				}
@@ -184,6 +172,10 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 				);
 			},
 			async () => {
+				if (this.client) {
+					await this.client.end();
+				}
+
 				this.client = await this.initializeClient();
 			},
 		);
@@ -198,16 +190,23 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 	async createTable(name: string, schema: Schema): Promise<void> {
 		this.trySeveralTimes(
 			async () => {
-				await this.testConnection();
-
 				if (!this.client) {
 					this.client = await this.initializeClient();
 				}
 
 				await this.deleteTable(name);
+			},
+			async () => {
+				if (this.client) {
+					await this.client.end();
+				}
 
-				await this.testConnection();
+				this.client = await this.initializeClient();
+			},
+		);
 
+		this.trySeveralTimes(
+			async () => {
 				if (!this.client) {
 					this.client = await this.initializeClient();
 				}
@@ -217,6 +216,10 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 				await this.client.query<Result>(query, [name, schema.toString()]);
 			},
 			async () => {
+				if (this.client) {
+					await this.client.end();
+				}
+
 				this.client = await this.initializeClient();
 			},
 		);
@@ -229,8 +232,6 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 
 		this.trySeveralTimes(
 			async () => {
-				await this.testConnection();
-
 				if (!this.client) {
 					this.client = await this.initializeClient();
 				}
@@ -238,6 +239,10 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 				await this.client.query("DROP TABLE IF EXISTS ?", [name]);
 			},
 			async () => {
+				if (this.client) {
+					await this.client.end();
+				}
+
 				this.client = await this.initializeClient();
 			},
 		);
@@ -257,15 +262,6 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 		});
 	}
 
-	protected override async testConnection(): Promise<void> {
-		if (!this.client) {
-			this.client = await this.initializeClient();
-		}
-
-		const connection = this.client as DbConnection;
-		await connection.ping();
-	}
-
 	async query<T extends QueryResult>(
 		sql: string,
 		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
@@ -273,8 +269,6 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 	): Promise<[T, mysql.FieldPacket[]]> {
 		return await this.trySeveralTimes(
 			async () => {
-				await this.testConnection();
-
 				if (!this.client) {
 					this.client = await this.initializeClient();
 				}
@@ -282,6 +276,10 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 				return await this.client.query<T>(sql, params);
 			},
 			async () => {
+				if (this.client) {
+					await this.client.end();
+				}
+
 				this.client = await this.initializeClient();
 			},
 		);
@@ -292,8 +290,6 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 
 		[rows] = await this.trySeveralTimes(
 			async () => {
-				await this.testConnection();
-
 				if (!this.client) {
 					this.client = await this.initializeClient();
 				}
@@ -304,6 +300,10 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 				);
 			},
 			async () => {
+				if (this.client) {
+					await this.client.end();
+				}
+
 				this.client = await this.initializeClient();
 			},
 		);
@@ -318,8 +318,6 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 	async createDatabase(database: string): Promise<void> {
 		this.trySeveralTimes(
 			async () => {
-				await this.testConnection();
-
 				if (!this.client) {
 					this.client = await this.initializeClient();
 				}
@@ -330,6 +328,10 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 				);
 			},
 			async () => {
+				if (this.client) {
+					await this.client.end();
+				}
+
 				this.client = await this.initializeClient();
 			},
 		);
@@ -338,8 +340,6 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 	async deleteDatabase(database: string): Promise<void> {
 		this.trySeveralTimes(
 			async () => {
-				await this.testConnection();
-
 				if (!this.client) {
 					this.client = await this.initializeClient();
 				}
@@ -347,6 +347,10 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 				await this.client.query("DROP DATABASE IF EXISTS ?", [database]);
 			},
 			async () => {
+				if (this.client) {
+					await this.client.end();
+				}
+
 				this.client = await this.initializeClient();
 			},
 		);
@@ -355,8 +359,6 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 	async useDatabase(database: string): Promise<void> {
 		this.trySeveralTimes(
 			async () => {
-				await this.testConnection();
-
 				if (!this.client) {
 					this.client = await this.initializeClient();
 				}
@@ -364,6 +366,10 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 				await this.client.query("USE ?", [database]);
 			},
 			async () => {
+				if (this.client) {
+					await this.client.end();
+				}
+
 				this.client = await this.initializeClient();
 			},
 		);
@@ -373,8 +379,6 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 		let rows: Rows = [];
 		this.trySeveralTimes(
 			async () => {
-				await this.testConnection();
-
 				if (!this.client) {
 					this.client = await this.initializeClient();
 				}
@@ -385,6 +389,10 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 				);
 			},
 			async () => {
+				if (this.client) {
+					await this.client.end();
+				}
+
 				this.client = await this.initializeClient();
 			},
 		);
@@ -399,8 +407,6 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 	async createUser(userName: string, password: string): Promise<void> {
 		this.trySeveralTimes(
 			async () => {
-				await this.testConnection();
-
 				if (!this.client) {
 					this.client = await this.initializeClient();
 				}
@@ -411,6 +417,10 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 				);
 			},
 			async () => {
+				if (this.client) {
+					await this.client.end();
+				}
+
 				this.client = await this.initializeClient();
 			},
 		);
@@ -419,8 +429,6 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 	async grantAllPrivileges(userName: string): Promise<void> {
 		this.trySeveralTimes(
 			async () => {
-				await this.testConnection();
-
 				if (!this.client) {
 					this.client = await this.initializeClient();
 				}
@@ -429,16 +437,29 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 					"GRANT ALL PRIVILEGES ON *.* TO ?@'%'",
 					[userName],
 				);
+			},
+			async () => {
+				if (this.client) {
+					await this.client.end();
+				}
 
-				await this.testConnection();
+				this.client = await this.initializeClient();
+			},
+		);
 
+		this.trySeveralTimes(
+			async () => {
 				if (!this.client) {
 					this.client = await this.initializeClient();
 				}
 
-				await this.client.query<Result>("FLUSH PRIVILEGES");
+				await this.client.query("FLUSH PRIVILEGES");
 			},
 			async () => {
+				if (this.client) {
+					await this.client.end();
+				}
+
 				this.client = await this.initializeClient();
 			},
 		);
@@ -447,8 +468,6 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 	async deleteUser(userName: string): Promise<void> {
 		this.trySeveralTimes(
 			async () => {
-				await this.testConnection();
-
 				if (!this.client) {
 					this.client = await this.initializeClient();
 				}
@@ -458,6 +477,10 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 				]);
 			},
 			async () => {
+				if (this.client) {
+					await this.client.end();
+				}
+
 				this.client = await this.initializeClient();
 			},
 		);
