@@ -72,7 +72,6 @@ export class BaseRepository {
 	}
 
 	protected connect() {
-		console.log("Connecting to database...");
 		if (this.client !== undefined) {
 			return;
 		}
@@ -87,7 +86,6 @@ export class BaseRepository {
 	}
 
 	async disconnect(): Promise<void> {
-		console.log("Disconnecting to database...");
 		if (this.client !== undefined) {
 			await this.client.close();
 			this.client = undefined;

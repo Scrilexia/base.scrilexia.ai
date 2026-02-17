@@ -154,15 +154,21 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 
 class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 	async databaseExists(database: string): Promise<boolean> {
-		if (!this.client) {
-			throw new Error("Database connection is not established.");
-		}
+		let rows: Rows = [];
 
-		const dbName = this.sanitizeIdentifier(database);
-		const [rows] = await this.client.query<Rows>(
-			"SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?",
-			[dbName],
-		);
+		[rows] = await this.trySeveralTimes(async () => {
+			if (!this.client) {
+				await this.initializeClient();
+			}
+			const dbName = this.sanitizeIdentifier(database);
+			return (
+				(await this.client?.query<Rows>(
+					"SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?",
+					[dbName],
+				)) ?? ([] as unknown as [Rows, mysql.FieldPacket[]])
+			);
+		});
+
 		return rows.length > 0;
 	}
 
