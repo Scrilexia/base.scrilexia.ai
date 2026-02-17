@@ -126,6 +126,10 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 			);
 		});
 
+		if (rows.length === 0) {
+			console.warn(`Table ${name} does not exist.`);
+		}
+
 		return rows.length > 0;
 	}
 
@@ -184,6 +188,10 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 				[database],
 			);
 		});
+
+		if (rows.length === 0) {
+			console.warn(`Database ${database} does not exist.`);
+		}
 
 		return rows.length > 0;
 	}
@@ -251,6 +259,10 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 			);
 		});
 
+		if (rows.length === 0) {
+			console.warn(`User ${userName} does not exist.`);
+		}
+
 		return rows.length > 0;
 	}
 
@@ -284,6 +296,14 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 			await this.client.query<Result>("GRANT ALL PRIVILEGES ON *.* TO ?@'%'", [
 				userName,
 			]);
+
+			if (!this.client) {
+				await this.initializeClient();
+			}
+
+			if (!this.client) {
+				throw new Error("Database client is not initialized.");
+			}
 
 			await this.client.query<Result>("FLUSH PRIVILEGES");
 		});
