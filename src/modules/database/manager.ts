@@ -154,7 +154,7 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 			async () => {
 				if (this.client) {
 					try {
-						await this.client.end();
+						this.client.destroy();
 					} catch (error) {
 						console.error("Error closing database connection:", error);
 					}
@@ -182,7 +182,7 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 			async () => {
 				if (this.client) {
 					try {
-						await this.client.end();
+						this.client.destroy();
 					} catch (error) {
 						console.error("Error closing database connection:", error);
 					}
@@ -211,7 +211,7 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 			async () => {
 				if (this.client) {
 					try {
-						await this.client.end();
+						this.client.destroy();
 					} catch (error) {
 						console.error("Error closing database connection:", error);
 					}
@@ -234,7 +234,7 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 			async () => {
 				if (this.client) {
 					try {
-						await this.client.end();
+						this.client.destroy();
 					} catch (error) {
 						console.error("Error closing database connection:", error);
 					}
@@ -261,7 +261,7 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 			async () => {
 				if (this.client) {
 					try {
-						await this.client.end();
+						this.client.destroy();
 					} catch (error) {
 						console.error("Error closing database connection:", error);
 					}
