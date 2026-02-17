@@ -65,6 +65,8 @@ class DatabaseQuery implements IDatabaseQuery {
 		this.client = undefined;
 	}
 
+	protected async testConnection(): Promise<void> {}
+
 	protected async trySeveralTimes<T>(
 		functionSyncOrAsync: SyncOrAsyncFunction<T>,
 		maxRetries = 3,
@@ -89,9 +91,7 @@ class DatabaseQuery implements IDatabaseQuery {
 		params?: any,
 	): Promise<[T, mysql.FieldPacket[]]> {
 		return await this.trySeveralTimes(async () => {
-			if (!this.client) {
-				await this.initializeClient();
-			}
+			this.testConnection();
 
 			if (!this.client) {
 				throw new Error("Database client is not initialized.");
@@ -118,6 +118,10 @@ class DatabaseQuery implements IDatabaseQuery {
 
 class DatabaseClient extends DatabaseQuery implements IDatabase {
 	protected override async initializeClient(): Promise<void> {
+		if (this.client) {
+			await this.client.end();
+		}
+
 		this.client = mysql.createPool({
 			host: this.host,
 			port: this.port,
@@ -127,13 +131,25 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 		});
 	}
 
+	protected override async testConnection(): Promise<void> {
+		if (!this.client) {
+			await this.initializeClient();
+		}
+
+		if (!this.client) {
+			throw new Error("Database client is not initialized.");
+		}
+
+		const client = this.client as DbClient;
+		const connection = await client.getConnection();
+		connection.release();
+	}
+
 	async tableExists(name: string): Promise<boolean> {
 		let rows: Rows = [];
 
 		[rows] = await this.trySeveralTimes(async () => {
-			if (!this.client) {
-				await this.initializeClient();
-			}
+			this.testConnection();
 
 			if (!this.client) {
 				throw new Error("Database client is not initialized.");
@@ -154,15 +170,18 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 
 	async createTable(name: string, schema: Schema): Promise<void> {
 		this.trySeveralTimes(async () => {
-			if (!this.client) {
-				await this.initializeClient();
-			}
+			this.testConnection();
 
 			if (!this.client) {
 				throw new Error("Database client is not initialized.");
 			}
 
 			await this.deleteTable(name);
+			this.testConnection();
+
+			if (!this.client) {
+				throw new Error("Database client is not initialized.");
+			}
 
 			const query =
 				"CREATE TABLE ? (?) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci";
@@ -176,9 +195,7 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 		}
 
 		this.trySeveralTimes(async () => {
-			if (!this.client) {
-				await this.initializeClient();
-			}
+			this.testConnection();
 
 			if (!this.client) {
 				throw new Error("Database client is not initialized.");
@@ -199,13 +216,24 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 		});
 	}
 
+	protected override async testConnection(): Promise<void> {
+		if (!this.client) {
+			await this.initializeClient();
+		}
+
+		if (!this.client) {
+			throw new Error("Database client is not initialized.");
+		}
+
+		const connection = this.client as DbConnection;
+		await connection.ping();
+	}
+
 	async databaseExists(database: string): Promise<boolean> {
 		let rows: Rows = [];
 
 		[rows] = await this.trySeveralTimes(async () => {
-			if (!this.client) {
-				await this.initializeClient();
-			}
+			this.testConnection();
 
 			if (!this.client) {
 				throw new Error("Database client is not initialized.");
@@ -226,9 +254,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 
 	async createDatabase(database: string): Promise<void> {
 		this.trySeveralTimes(async () => {
-			if (!this.client) {
-				await this.initializeClient();
-			}
+			this.testConnection();
 
 			if (!this.client) {
 				throw new Error("Database client is not initialized.");
@@ -243,9 +269,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 
 	async deleteDatabase(database: string): Promise<void> {
 		this.trySeveralTimes(async () => {
-			if (!this.client) {
-				await this.initializeClient();
-			}
+			this.testConnection();
 
 			if (!this.client) {
 				throw new Error("Database client is not initialized.");
@@ -257,9 +281,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 
 	async useDatabase(database: string): Promise<void> {
 		this.trySeveralTimes(async () => {
-			if (!this.client) {
-				await this.initializeClient();
-			}
+			this.testConnection();
 
 			if (!this.client) {
 				throw new Error("Database client is not initialized.");
@@ -273,9 +295,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 	async userExists(userName: string): Promise<boolean> {
 		let rows: Rows = [];
 		this.trySeveralTimes(async () => {
-			if (!this.client) {
-				await this.initializeClient();
-			}
+			this.testConnection();
 
 			if (!this.client) {
 				throw new Error("Database client is not initialized.");
@@ -296,9 +316,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 
 	async createUser(userName: string, password: string): Promise<void> {
 		this.trySeveralTimes(async () => {
-			if (!this.client) {
-				await this.initializeClient();
-			}
+			this.testConnection();
 
 			if (!this.client) {
 				throw new Error("Database client is not initialized.");
@@ -313,9 +331,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 
 	async grantAllPrivileges(userName: string): Promise<void> {
 		this.trySeveralTimes(async () => {
-			if (!this.client) {
-				await this.initializeClient();
-			}
+			this.testConnection();
 
 			if (!this.client) {
 				throw new Error("Database client is not initialized.");
@@ -325,9 +341,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 				userName,
 			]);
 
-			if (!this.client) {
-				await this.initializeClient();
-			}
+			this.testConnection();
 
 			if (!this.client) {
 				throw new Error("Database client is not initialized.");
@@ -339,9 +353,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 
 	async deleteUser(userName: string): Promise<void> {
 		this.trySeveralTimes(async () => {
-			if (!this.client) {
-				await this.initializeClient();
-			}
+			this.testConnection();
 
 			if (!this.client) {
 				throw new Error("Database client is not initialized.");
