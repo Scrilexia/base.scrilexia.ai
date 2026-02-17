@@ -65,8 +65,8 @@ class DatabaseQuery implements IDatabaseQuery {
 		this.client = undefined;
 	}
 
-	protected async initializeClient(): Promise<void> {
-		this.client = undefined;
+	protected async initializeClient(): Promise<DbClient | DbConnection> {
+		throw new Error("Method not implemented.");
 	}
 
 	protected async testConnection(): Promise<void> {}
@@ -122,9 +122,11 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 		});
 	}
 
-	protected override async initializeClient(): Promise<void> {
+	protected override async initializeClient(): Promise<
+		DbClient | DbConnection
+	> {
 		console.log("Initializing database client...");
-		this.client = mysql.createPool({
+		return mysql.createPool({
 			host: this.host,
 			port: this.port,
 			user: this.user,
@@ -135,11 +137,7 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 
 	protected override async testConnection(): Promise<void> {
 		if (!this.client) {
-			await this.initializeClient();
-		}
-
-		if (!this.client) {
-			throw new Error("Database client is not initialized.");
+			this.client = await this.initializeClient();
 		}
 
 		const client = this.client as DbClient;
@@ -156,7 +154,7 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 			this.testConnection();
 
 			if (!this.client) {
-				throw new Error("Database client is not initialized.");
+				this.client = await this.initializeClient();
 			}
 
 			return await this.client.query<T>(sql, params);
@@ -170,7 +168,7 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 			this.testConnection();
 
 			if (!this.client) {
-				throw new Error("Database client is not initialized.");
+				this.client = await this.initializeClient();
 			}
 
 			return await this.client.query<Rows>(
@@ -191,14 +189,15 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 			this.testConnection();
 
 			if (!this.client) {
-				throw new Error("Database client is not initialized.");
+				this.client = await this.initializeClient();
 			}
 
 			await this.deleteTable(name);
+
 			this.testConnection();
 
 			if (!this.client) {
-				throw new Error("Database client is not initialized.");
+				this.client = await this.initializeClient();
 			}
 
 			const query =
@@ -216,7 +215,7 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 			this.testConnection();
 
 			if (!this.client) {
-				throw new Error("Database client is not initialized.");
+				this.client = await this.initializeClient();
 			}
 
 			await this.client.query("DROP TABLE IF EXISTS ?", [name]);
@@ -225,9 +224,11 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 }
 
 class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
-	protected override async initializeClient(): Promise<void> {
+	protected override async initializeClient(): Promise<
+		DbClient | DbConnection
+	> {
 		console.log("Initializing database connection...");
-		this.client = await mysql.createConnection({
+		return await mysql.createConnection({
 			host: this.host,
 			port: this.port,
 			user: this.user,
@@ -237,11 +238,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 
 	protected override async testConnection(): Promise<void> {
 		if (!this.client) {
-			await this.initializeClient();
-		}
-
-		if (!this.client) {
-			throw new Error("Database client is not initialized.");
+			this.client = await this.initializeClient();
 		}
 
 		const connection = this.client as DbConnection;
@@ -257,7 +254,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 			this.testConnection();
 
 			if (!this.client) {
-				throw new Error("Database client is not initialized.");
+				this.client = await this.initializeClient();
 			}
 
 			return await this.client.query<T>(sql, params);
@@ -271,7 +268,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 			this.testConnection();
 
 			if (!this.client) {
-				throw new Error("Database client is not initialized.");
+				this.client = await this.initializeClient();
 			}
 
 			return await this.client.query<Rows>(
@@ -292,7 +289,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 			this.testConnection();
 
 			if (!this.client) {
-				throw new Error("Database client is not initialized.");
+				this.client = await this.initializeClient();
 			}
 
 			await this.client.query<Result>(
@@ -307,7 +304,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 			this.testConnection();
 
 			if (!this.client) {
-				throw new Error("Database client is not initialized.");
+				this.client = await this.initializeClient();
 			}
 
 			await this.client.query("DROP DATABASE IF EXISTS ?", [database]);
@@ -319,10 +316,9 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 			this.testConnection();
 
 			if (!this.client) {
-				throw new Error("Database client is not initialized.");
+				this.client = await this.initializeClient();
 			}
 
-			const dbName = this.sanitizeIdentifier(database);
 			await this.client.query("USE ?", [database]);
 		});
 	}
@@ -333,7 +329,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 			this.testConnection();
 
 			if (!this.client) {
-				throw new Error("Database client is not initialized.");
+				this.client = await this.initializeClient();
 			}
 
 			[rows] = await this.client.query<Rows>(
@@ -354,7 +350,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 			this.testConnection();
 
 			if (!this.client) {
-				throw new Error("Database client is not initialized.");
+				this.client = await this.initializeClient();
 			}
 
 			await this.client.query<Result>(
@@ -369,7 +365,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 			this.testConnection();
 
 			if (!this.client) {
-				throw new Error("Database client is not initialized.");
+				this.client = await this.initializeClient();
 			}
 
 			await this.client.query<Result>("GRANT ALL PRIVILEGES ON *.* TO ?@'%'", [
@@ -379,7 +375,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 			this.testConnection();
 
 			if (!this.client) {
-				throw new Error("Database client is not initialized.");
+				this.client = await this.initializeClient();
 			}
 
 			await this.client.query<Result>("FLUSH PRIVILEGES");
@@ -391,7 +387,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 			this.testConnection();
 
 			if (!this.client) {
-				throw new Error("Database client is not initialized.");
+				this.client = await this.initializeClient();
 			}
 
 			await this.client.query<Result>("DROP USER IF EXISTS ?@'%'", [userName]);
