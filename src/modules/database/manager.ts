@@ -73,6 +73,7 @@ class DatabaseQuery implements IDatabaseQuery {
 
 	protected async trySeveralTimes<T>(
 		functionSyncOrAsync: SyncOrAsyncFunction<T>,
+		catchError: () => Promise<void>,
 		maxRetries = 3,
 	): Promise<T> {
 		let tries = 0;
@@ -83,7 +84,7 @@ class DatabaseQuery implements IDatabaseQuery {
 				console.error("Database error:", error);
 				tries++;
 				console.debug(`Retrying... (${tries}/${maxRetries})`);
-				await this.initializeClient();
+				catchError();
 			}
 		}
 		throw new Error("Maximum retry attempts reached.");
@@ -150,32 +151,42 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 		params?: any,
 	): Promise<[T, mysql.FieldPacket[]]> {
-		return await this.trySeveralTimes(async () => {
-			await this.testConnection();
+		return await this.trySeveralTimes(
+			async () => {
+				await this.testConnection();
 
-			if (!this.client) {
+				if (!this.client) {
+					this.client = await this.initializeClient();
+				}
+
+				return await this.client.query<T>(sql, params);
+			},
+			async () => {
 				this.client = await this.initializeClient();
-			}
-
-			return await this.client.query<T>(sql, params);
-		});
+			},
+		);
 	}
 
 	async tableExists(name: string): Promise<boolean> {
 		let rows: Rows = [];
 
-		[rows] = await this.trySeveralTimes(async () => {
-			await this.testConnection();
+		[rows] = await this.trySeveralTimes(
+			async () => {
+				await this.testConnection();
 
-			if (!this.client) {
+				if (!this.client) {
+					this.client = await this.initializeClient();
+				}
+
+				return await this.client.query<Rows>(
+					"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = ?",
+					[name],
+				);
+			},
+			async () => {
 				this.client = await this.initializeClient();
-			}
-
-			return await this.client.query<Rows>(
-				"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = ?",
-				[name],
-			);
-		});
+			},
+		);
 
 		if (rows.length === 0) {
 			console.warn(`Table ${name} does not exist.`);
@@ -185,25 +196,30 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 	}
 
 	async createTable(name: string, schema: Schema): Promise<void> {
-		this.trySeveralTimes(async () => {
-			await this.testConnection();
+		this.trySeveralTimes(
+			async () => {
+				await this.testConnection();
 
-			if (!this.client) {
+				if (!this.client) {
+					this.client = await this.initializeClient();
+				}
+
+				await this.deleteTable(name);
+
+				await this.testConnection();
+
+				if (!this.client) {
+					this.client = await this.initializeClient();
+				}
+
+				const query =
+					"CREATE TABLE ? (?) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci";
+				await this.client.query<Result>(query, [name, schema.toString()]);
+			},
+			async () => {
 				this.client = await this.initializeClient();
-			}
-
-			await this.deleteTable(name);
-
-			await this.testConnection();
-
-			if (!this.client) {
-				this.client = await this.initializeClient();
-			}
-
-			const query =
-				"CREATE TABLE ? (?) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci";
-			await this.client.query<Result>(query, [name, schema.toString()]);
-		});
+			},
+		);
 	}
 
 	async deleteTable(name: string): Promise<void> {
@@ -211,15 +227,20 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 			return;
 		}
 
-		this.trySeveralTimes(async () => {
-			await this.testConnection();
+		this.trySeveralTimes(
+			async () => {
+				await this.testConnection();
 
-			if (!this.client) {
+				if (!this.client) {
+					this.client = await this.initializeClient();
+				}
+
+				await this.client.query("DROP TABLE IF EXISTS ?", [name]);
+			},
+			async () => {
 				this.client = await this.initializeClient();
-			}
-
-			await this.client.query("DROP TABLE IF EXISTS ?", [name]);
-		});
+			},
+		);
 	}
 }
 
@@ -250,32 +271,42 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 		params?: any,
 	): Promise<[T, mysql.FieldPacket[]]> {
-		return await this.trySeveralTimes(async () => {
-			await this.testConnection();
+		return await this.trySeveralTimes(
+			async () => {
+				await this.testConnection();
 
-			if (!this.client) {
+				if (!this.client) {
+					this.client = await this.initializeClient();
+				}
+
+				return await this.client.query<T>(sql, params);
+			},
+			async () => {
 				this.client = await this.initializeClient();
-			}
-
-			return await this.client.query<T>(sql, params);
-		});
+			},
+		);
 	}
 
 	async databaseExists(database: string): Promise<boolean> {
 		let rows: Rows = [];
 
-		[rows] = await this.trySeveralTimes(async () => {
-			await this.testConnection();
+		[rows] = await this.trySeveralTimes(
+			async () => {
+				await this.testConnection();
 
-			if (!this.client) {
+				if (!this.client) {
+					this.client = await this.initializeClient();
+				}
+
+				return await this.client.query<Rows>(
+					"SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?",
+					[database],
+				);
+			},
+			async () => {
 				this.client = await this.initializeClient();
-			}
-
-			return await this.client.query<Rows>(
-				"SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?",
-				[database],
-			);
-		});
+			},
+		);
 
 		if (rows.length === 0) {
 			console.warn(`Database ${database} does not exist.`);
@@ -285,58 +316,78 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 	}
 
 	async createDatabase(database: string): Promise<void> {
-		this.trySeveralTimes(async () => {
-			await this.testConnection();
+		this.trySeveralTimes(
+			async () => {
+				await this.testConnection();
 
-			if (!this.client) {
+				if (!this.client) {
+					this.client = await this.initializeClient();
+				}
+
+				await this.client.query<Result>(
+					"CREATE DATABASE ? CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci",
+					[database],
+				);
+			},
+			async () => {
 				this.client = await this.initializeClient();
-			}
-
-			await this.client.query<Result>(
-				"CREATE DATABASE ? CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci",
-				[database],
-			);
-		});
+			},
+		);
 	}
 
 	async deleteDatabase(database: string): Promise<void> {
-		this.trySeveralTimes(async () => {
-			await this.testConnection();
+		this.trySeveralTimes(
+			async () => {
+				await this.testConnection();
 
-			if (!this.client) {
+				if (!this.client) {
+					this.client = await this.initializeClient();
+				}
+
+				await this.client.query("DROP DATABASE IF EXISTS ?", [database]);
+			},
+			async () => {
 				this.client = await this.initializeClient();
-			}
-
-			await this.client.query("DROP DATABASE IF EXISTS ?", [database]);
-		});
+			},
+		);
 	}
 
 	async useDatabase(database: string): Promise<void> {
-		this.trySeveralTimes(async () => {
-			await this.testConnection();
+		this.trySeveralTimes(
+			async () => {
+				await this.testConnection();
 
-			if (!this.client) {
+				if (!this.client) {
+					this.client = await this.initializeClient();
+				}
+
+				await this.client.query("USE ?", [database]);
+			},
+			async () => {
 				this.client = await this.initializeClient();
-			}
-
-			await this.client.query("USE ?", [database]);
-		});
+			},
+		);
 	}
 
 	async userExists(userName: string): Promise<boolean> {
 		let rows: Rows = [];
-		this.trySeveralTimes(async () => {
-			await this.testConnection();
+		this.trySeveralTimes(
+			async () => {
+				await this.testConnection();
 
-			if (!this.client) {
+				if (!this.client) {
+					this.client = await this.initializeClient();
+				}
+
+				[rows] = await this.client.query<Rows>(
+					"SELECT User FROM mysql.user WHERE User = ?",
+					[userName],
+				);
+			},
+			async () => {
 				this.client = await this.initializeClient();
-			}
-
-			[rows] = await this.client.query<Rows>(
-				"SELECT User FROM mysql.user WHERE User = ?",
-				[userName],
-			);
-		});
+			},
+		);
 
 		if (rows.length === 0) {
 			console.warn(`User ${userName} does not exist.`);
@@ -346,52 +397,70 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 	}
 
 	async createUser(userName: string, password: string): Promise<void> {
-		this.trySeveralTimes(async () => {
-			await this.testConnection();
+		this.trySeveralTimes(
+			async () => {
+				await this.testConnection();
 
-			if (!this.client) {
+				if (!this.client) {
+					this.client = await this.initializeClient();
+				}
+
+				await this.client.query<Result>(
+					"CREATE USER IF NOT EXISTS ?@'%' IDENTIFIED BY ?",
+					[userName, password],
+				);
+			},
+			async () => {
 				this.client = await this.initializeClient();
-			}
-
-			await this.client.query<Result>(
-				"CREATE USER IF NOT EXISTS ?@'%' IDENTIFIED BY ?",
-				[userName, password],
-			);
-		});
+			},
+		);
 	}
 
 	async grantAllPrivileges(userName: string): Promise<void> {
-		this.trySeveralTimes(async () => {
-			await this.testConnection();
+		this.trySeveralTimes(
+			async () => {
+				await this.testConnection();
 
-			if (!this.client) {
+				if (!this.client) {
+					this.client = await this.initializeClient();
+				}
+
+				await this.client.query<Result>(
+					"GRANT ALL PRIVILEGES ON *.* TO ?@'%'",
+					[userName],
+				);
+
+				await this.testConnection();
+
+				if (!this.client) {
+					this.client = await this.initializeClient();
+				}
+
+				await this.client.query<Result>("FLUSH PRIVILEGES");
+			},
+			async () => {
 				this.client = await this.initializeClient();
-			}
-
-			await this.client.query<Result>("GRANT ALL PRIVILEGES ON *.* TO ?@'%'", [
-				userName,
-			]);
-
-			await this.testConnection();
-
-			if (!this.client) {
-				this.client = await this.initializeClient();
-			}
-
-			await this.client.query<Result>("FLUSH PRIVILEGES");
-		});
+			},
+		);
 	}
 
 	async deleteUser(userName: string): Promise<void> {
-		this.trySeveralTimes(async () => {
-			await this.testConnection();
+		this.trySeveralTimes(
+			async () => {
+				await this.testConnection();
 
-			if (!this.client) {
+				if (!this.client) {
+					this.client = await this.initializeClient();
+				}
+
+				await this.client.query<Result>("DROP USER IF EXISTS ?@'%'", [
+					userName,
+				]);
+			},
+			async () => {
 				this.client = await this.initializeClient();
-			}
-
-			await this.client.query<Result>("DROP USER IF EXISTS ?@'%'", [userName]);
-		});
+			},
+		);
 	}
 }
 
