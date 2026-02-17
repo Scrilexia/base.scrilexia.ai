@@ -167,18 +167,17 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 	}
 
 	async tableExists(name: string): Promise<boolean> {
-		let rows: Rows = [];
-
-		[rows] = await this.trySeveralTimes(
+		const rows = await this.trySeveralTimes<Rows>(
 			async () => {
 				if (!this.client) {
 					this.client = await this.initializeClient();
 				}
 
-				return await this.client.query<Rows>(
+				const [rowsToReturn] = await this.client.query<Rows>(
 					"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = ?",
 					[name],
 				);
+				return rowsToReturn;
 			},
 			async () => {
 				if (this.client) {
@@ -202,7 +201,7 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 	}
 
 	async createTable(name: string, schema: Schema): Promise<void> {
-		this.trySeveralTimes(
+		await this.trySeveralTimes(
 			async () => {
 				if (!this.client) {
 					this.client = await this.initializeClient();
@@ -224,7 +223,7 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 			},
 		);
 
-		this.trySeveralTimes(
+		await this.trySeveralTimes(
 			async () => {
 				if (!this.client) {
 					this.client = await this.initializeClient();
@@ -253,7 +252,7 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 			return;
 		}
 
-		this.trySeveralTimes(
+		await this.trySeveralTimes(
 			async () => {
 				if (!this.client) {
 					this.client = await this.initializeClient();
@@ -318,18 +317,17 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 	}
 
 	async databaseExists(database: string): Promise<boolean> {
-		let rows: Rows = [];
-
-		[rows] = await this.trySeveralTimes(
+		const rows = await this.trySeveralTimes<Rows>(
 			async () => {
 				if (!this.client) {
 					this.client = await this.initializeClient();
 				}
 
-				return await this.client.query<Rows>(
+				const [rowsToReturn] = await this.client.query<Rows>(
 					"SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?",
 					[database],
 				);
+				return rowsToReturn;
 			},
 			async () => {
 				if (this.client) {
@@ -352,7 +350,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 	}
 
 	async createDatabase(database: string): Promise<void> {
-		this.trySeveralTimes(
+		await this.trySeveralTimes(
 			async () => {
 				if (!this.client) {
 					this.client = await this.initializeClient();
@@ -378,7 +376,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 	}
 
 	async deleteDatabase(database: string): Promise<void> {
-		this.trySeveralTimes(
+		await this.trySeveralTimes(
 			async () => {
 				if (!this.client) {
 					this.client = await this.initializeClient();
@@ -401,7 +399,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 	}
 
 	async useDatabase(database: string): Promise<void> {
-		this.trySeveralTimes(
+		await this.trySeveralTimes(
 			async () => {
 				if (!this.client) {
 					this.client = await this.initializeClient();
@@ -424,17 +422,18 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 	}
 
 	async userExists(userName: string): Promise<boolean> {
-		let rows: Rows = [];
-		this.trySeveralTimes(
+		const rows = await this.trySeveralTimes<Rows>(
 			async () => {
 				if (!this.client) {
 					this.client = await this.initializeClient();
 				}
 
-				[rows] = await this.client.query<Rows>(
+				const [rowsToReturn] = await this.client.query<Rows>(
 					"SELECT User FROM mysql.user WHERE User = ?",
 					[userName],
 				);
+
+				return rowsToReturn;
 			},
 			async () => {
 				if (this.client) {
@@ -457,7 +456,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 	}
 
 	async createUser(userName: string, password: string): Promise<void> {
-		this.trySeveralTimes(
+		await this.trySeveralTimes(
 			async () => {
 				if (!this.client) {
 					this.client = await this.initializeClient();
@@ -483,7 +482,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 	}
 
 	async grantAllPrivileges(userName: string): Promise<void> {
-		this.trySeveralTimes(
+		await this.trySeveralTimes(
 			async () => {
 				if (!this.client) {
 					this.client = await this.initializeClient();
@@ -507,7 +506,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 			},
 		);
 
-		this.trySeveralTimes(
+		await this.trySeveralTimes(
 			async () => {
 				if (!this.client) {
 					this.client = await this.initializeClient();
@@ -530,7 +529,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 	}
 
 	async deleteUser(userName: string): Promise<void> {
-		this.trySeveralTimes(
+		await this.trySeveralTimes(
 			async () => {
 				if (!this.client) {
 					this.client = await this.initializeClient();
