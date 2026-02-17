@@ -9,12 +9,6 @@ export type Result = mysql.ResultSetHeader;
 export type Rows = mysql.RowDataPacket[];
 
 export interface IDatabaseQuery {
-	query<T extends QueryResult>(
-		sql: string,
-		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-		params?: any,
-	): Promise<[T, mysql.FieldPacket[]]>;
-
 	close(): Promise<void>;
 }
 
@@ -22,6 +16,11 @@ type SyncOrAsync<T> = T | Promise<T>;
 type SyncOrAsyncFunction<T> = () => SyncOrAsync<T>;
 
 export interface IDatabaseConnection extends IDatabaseQuery {
+	query<T extends QueryResult>(
+		sql: string,
+		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+		params?: any,
+	): Promise<[T, mysql.FieldPacket[]]>;
 	databaseExists(database: string): Promise<boolean>;
 	createDatabase(database: string): Promise<void>;
 	deleteDatabase(database: string): Promise<void>;
@@ -33,6 +32,11 @@ export interface IDatabaseConnection extends IDatabaseQuery {
 }
 
 export interface IDatabase extends IDatabaseQuery {
+	query<T extends QueryResult>(
+		sql: string,
+		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+		params?: any,
+	): Promise<[T, mysql.FieldPacket[]]>;
 	tableExists(name: string): Promise<boolean>;
 	createTable(name: string, schema: Schema): Promise<void>;
 	deleteTable(name: string): Promise<void>;
@@ -58,7 +62,7 @@ class DatabaseQuery implements IDatabaseQuery {
 		this.user = user;
 		this.password = password;
 		this.database = database;
-		this.initializeClient();
+		this.client = undefined;
 	}
 
 	protected async initializeClient(): Promise<void> {
@@ -85,22 +89,6 @@ class DatabaseQuery implements IDatabaseQuery {
 		throw new Error("Maximum retry attempts reached.");
 	}
 
-	async query<T extends QueryResult>(
-		sql: string,
-		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-		params?: any,
-	): Promise<[T, mysql.FieldPacket[]]> {
-		return await this.trySeveralTimes(async () => {
-			this.testConnection();
-
-			if (!this.client) {
-				throw new Error("Database client is not initialized.");
-			}
-
-			return await this.client.query<T>(sql, params);
-		});
-	}
-
 	async close(): Promise<void> {
 		if (this.client) {
 			await this.client.end();
@@ -117,8 +105,25 @@ class DatabaseQuery implements IDatabaseQuery {
 }
 
 class DatabaseClient extends DatabaseQuery implements IDatabase {
+	constructor(
+		host: string,
+		port: number,
+		user: string,
+		password: string,
+		database: string,
+	) {
+		super(host, port, user, password, database);
+		this.client = mysql.createPool({
+			host: this.host,
+			port: this.port,
+			user: this.user,
+			password: this.password,
+			database: this.database,
+		});
+	}
+
 	protected override async initializeClient(): Promise<void> {
-		console.log("Initializing database connection...");
+		console.log("Initializing database client...");
 		this.client = mysql.createPool({
 			host: this.host,
 			port: this.port,
@@ -140,6 +145,22 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 		const client = this.client as DbClient;
 		const connection = await client.getConnection();
 		connection.release();
+	}
+
+	async query<T extends QueryResult>(
+		sql: string,
+		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+		params?: any,
+	): Promise<[T, mysql.FieldPacket[]]> {
+		return await this.trySeveralTimes(async () => {
+			this.testConnection();
+
+			if (!this.client) {
+				throw new Error("Database client is not initialized.");
+			}
+
+			return await this.client.query<T>(sql, params);
+		});
 	}
 
 	async tableExists(name: string): Promise<boolean> {
@@ -225,6 +246,22 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 
 		const connection = this.client as DbConnection;
 		await connection.ping();
+	}
+
+	async query<T extends QueryResult>(
+		sql: string,
+		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+		params?: any,
+	): Promise<[T, mysql.FieldPacket[]]> {
+		return await this.trySeveralTimes(async () => {
+			this.testConnection();
+
+			if (!this.client) {
+				throw new Error("Database client is not initialized.");
+			}
+
+			return await this.client.query<T>(sql, params);
+		});
 	}
 
 	async databaseExists(database: string): Promise<boolean> {
