@@ -151,7 +151,7 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 		params?: any,
 	): Promise<[T, mysql.FieldPacket[]]> {
 		return await this.trySeveralTimes(async () => {
-			this.testConnection();
+			await this.testConnection();
 
 			if (!this.client) {
 				this.client = await this.initializeClient();
@@ -165,7 +165,7 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 		let rows: Rows = [];
 
 		[rows] = await this.trySeveralTimes(async () => {
-			this.testConnection();
+			await this.testConnection();
 
 			if (!this.client) {
 				this.client = await this.initializeClient();
@@ -186,7 +186,7 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 
 	async createTable(name: string, schema: Schema): Promise<void> {
 		this.trySeveralTimes(async () => {
-			this.testConnection();
+			await this.testConnection();
 
 			if (!this.client) {
 				this.client = await this.initializeClient();
@@ -194,7 +194,7 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 
 			await this.deleteTable(name);
 
-			this.testConnection();
+			await this.testConnection();
 
 			if (!this.client) {
 				this.client = await this.initializeClient();
@@ -212,7 +212,7 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 		}
 
 		this.trySeveralTimes(async () => {
-			this.testConnection();
+			await this.testConnection();
 
 			if (!this.client) {
 				this.client = await this.initializeClient();
@@ -251,7 +251,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 		params?: any,
 	): Promise<[T, mysql.FieldPacket[]]> {
 		return await this.trySeveralTimes(async () => {
-			this.testConnection();
+			await this.testConnection();
 
 			if (!this.client) {
 				this.client = await this.initializeClient();
@@ -265,7 +265,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 		let rows: Rows = [];
 
 		[rows] = await this.trySeveralTimes(async () => {
-			this.testConnection();
+			await this.testConnection();
 
 			if (!this.client) {
 				this.client = await this.initializeClient();
@@ -286,7 +286,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 
 	async createDatabase(database: string): Promise<void> {
 		this.trySeveralTimes(async () => {
-			this.testConnection();
+			await this.testConnection();
 
 			if (!this.client) {
 				this.client = await this.initializeClient();
@@ -301,7 +301,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 
 	async deleteDatabase(database: string): Promise<void> {
 		this.trySeveralTimes(async () => {
-			this.testConnection();
+			await this.testConnection();
 
 			if (!this.client) {
 				this.client = await this.initializeClient();
@@ -313,7 +313,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 
 	async useDatabase(database: string): Promise<void> {
 		this.trySeveralTimes(async () => {
-			this.testConnection();
+			await this.testConnection();
 
 			if (!this.client) {
 				this.client = await this.initializeClient();
@@ -326,7 +326,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 	async userExists(userName: string): Promise<boolean> {
 		let rows: Rows = [];
 		this.trySeveralTimes(async () => {
-			this.testConnection();
+			await this.testConnection();
 
 			if (!this.client) {
 				this.client = await this.initializeClient();
@@ -347,7 +347,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 
 	async createUser(userName: string, password: string): Promise<void> {
 		this.trySeveralTimes(async () => {
-			this.testConnection();
+			await this.testConnection();
 
 			if (!this.client) {
 				this.client = await this.initializeClient();
@@ -362,7 +362,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 
 	async grantAllPrivileges(userName: string): Promise<void> {
 		this.trySeveralTimes(async () => {
-			this.testConnection();
+			await this.testConnection();
 
 			if (!this.client) {
 				this.client = await this.initializeClient();
@@ -372,7 +372,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 				userName,
 			]);
 
-			this.testConnection();
+			await this.testConnection();
 
 			if (!this.client) {
 				this.client = await this.initializeClient();
@@ -384,7 +384,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 
 	async deleteUser(userName: string): Promise<void> {
 		this.trySeveralTimes(async () => {
-			this.testConnection();
+			await this.testConnection();
 
 			if (!this.client) {
 				this.client = await this.initializeClient();
