@@ -80,10 +80,15 @@ class DatabaseQuery implements IDatabaseQuery {
 		params?: any,
 	): Promise<[T, mysql.FieldPacket[]]> {
 		return await this.trySeveralTimes(async () => {
-			return (
-				(await this.client?.query<T>(sql, params)) ??
-				([] as unknown as [T, mysql.FieldPacket[]])
-			);
+			if (!this.client) {
+				await this.initializeClient();
+			}
+
+			if (!this.client) {
+				throw new Error("Database client is not initialized.");
+			}
+
+			return await this.client.query<T>(sql, params);
 		});
 	}
 
@@ -111,11 +116,13 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 				await this.initializeClient();
 			}
 
-			return (
-				(await this.client?.query<Rows>(
-					"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = ?",
-					[name],
-				)) ?? ([] as unknown as [Rows, mysql.FieldPacket[]])
+			if (!this.client) {
+				throw new Error("Database client is not initialized.");
+			}
+
+			return await this.client.query<Rows>(
+				"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = ?",
+				[name],
 			);
 		});
 
@@ -128,11 +135,15 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 				await this.initializeClient();
 			}
 
+			if (!this.client) {
+				throw new Error("Database client is not initialized.");
+			}
+
 			await this.deleteTable(name);
 
 			const tableName = this.sanitizeIdentifier(name);
 			const query = `CREATE TABLE ${tableName} (${schema.toString()}) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci`;
-			await this.client?.query<Result>(query);
+			await this.client.query<Result>(query);
 		});
 	}
 
@@ -146,8 +157,12 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 				await this.initializeClient();
 			}
 
+			if (!this.client) {
+				throw new Error("Database client is not initialized.");
+			}
+
 			const tableName = this.sanitizeIdentifier(name);
-			await this.client?.query(`DROP TABLE IF EXISTS ${tableName}`);
+			await this.client.query(`DROP TABLE IF EXISTS ${tableName}`);
 		});
 	}
 }
@@ -160,12 +175,15 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 			if (!this.client) {
 				await this.initializeClient();
 			}
+
+			if (!this.client) {
+				throw new Error("Database client is not initialized.");
+			}
+
 			const dbName = this.sanitizeIdentifier(database);
-			return (
-				(await this.client?.query<Rows>(
-					"SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?",
-					[dbName],
-				)) ?? ([] as unknown as [Rows, mysql.FieldPacket[]])
+			return await this.client.query<Rows>(
+				"SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?",
+				[dbName],
 			);
 		});
 
@@ -178,8 +196,12 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 				await this.initializeClient();
 			}
 
+			if (!this.client) {
+				throw new Error("Database client is not initialized.");
+			}
+
 			const dbName = this.sanitizeIdentifier(database);
-			await this.client?.query<Result>(
+			await this.client.query<Result>(
 				`CREATE DATABASE ${dbName} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci`,
 			);
 		});
@@ -191,8 +213,12 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 				await this.initializeClient();
 			}
 
+			if (!this.client) {
+				throw new Error("Database client is not initialized.");
+			}
+
 			const dbName = this.sanitizeIdentifier(database);
-			await this.client?.query(`DROP DATABASE IF EXISTS ${dbName}`);
+			await this.client.query(`DROP DATABASE IF EXISTS ${dbName}`);
 		});
 	}
 
@@ -202,8 +228,12 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 				await this.initializeClient();
 			}
 
+			if (!this.client) {
+				throw new Error("Database client is not initialized.");
+			}
+
 			const dbName = this.sanitizeIdentifier(database);
-			await this.client?.query(`USE ${dbName}`);
+			await this.client.query(`USE ${dbName}`);
 		});
 	}
 
@@ -214,11 +244,14 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 				await this.initializeClient();
 			}
 
-			[rows] =
-				(await this.client?.query<Rows>(
-					"SELECT User FROM mysql.user WHERE User = ?",
-					[userName],
-				)) ?? ([] as unknown as [Rows, mysql.FieldPacket[]]);
+			if (!this.client) {
+				throw new Error("Database client is not initialized.");
+			}
+
+			[rows] = await this.client.query<Rows>(
+				"SELECT User FROM mysql.user WHERE User = ?",
+				[userName],
+			);
 		});
 
 		return rows.length > 0;
@@ -230,7 +263,11 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 				await this.initializeClient();
 			}
 
-			await this.client?.query<Result>(
+			if (!this.client) {
+				throw new Error("Database client is not initialized.");
+			}
+
+			await this.client.query<Result>(
 				"CREATE USER IF NOT EXISTS ?@'%' IDENTIFIED BY ?",
 				[userName, password],
 			);
@@ -243,11 +280,15 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 				await this.initializeClient();
 			}
 
-			await this.client?.query<Result>("GRANT ALL PRIVILEGES ON *.* TO ?@'%'", [
+			if (!this.client) {
+				throw new Error("Database client is not initialized.");
+			}
+
+			await this.client.query<Result>("GRANT ALL PRIVILEGES ON *.* TO ?@'%'", [
 				userName,
 			]);
 
-			await this.client?.query<Result>("FLUSH PRIVILEGES");
+			await this.client.query<Result>("FLUSH PRIVILEGES");
 		});
 	}
 
@@ -257,7 +298,11 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 				await this.initializeClient();
 			}
 
-			await this.client?.query<Result>("DROP USER IF EXISTS ?@'%'", [userName]);
+			if (!this.client) {
+				throw new Error("Database client is not initialized.");
+			}
+
+			await this.client.query<Result>("DROP USER IF EXISTS ?@'%'", [userName]);
 		});
 	}
 }
