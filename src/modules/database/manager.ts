@@ -118,10 +118,7 @@ class DatabaseQuery implements IDatabaseQuery {
 
 class DatabaseClient extends DatabaseQuery implements IDatabase {
 	protected override async initializeClient(): Promise<void> {
-		if (this.client) {
-			await this.client.end();
-		}
-
+		console.log("Initializing database connection...");
 		this.client = mysql.createPool({
 			host: this.host,
 			port: this.port,
@@ -208,6 +205,7 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 
 class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 	protected override async initializeClient(): Promise<void> {
+		console.log("Initializing database connection...");
 		this.client = await mysql.createConnection({
 			host: this.host,
 			port: this.port,
