@@ -40,16 +40,29 @@ export interface IDatabase extends IDatabaseQuery {
 
 class DatabaseQuery implements IDatabaseQuery {
 	protected client: DbClient | DbConnection | undefined;
-	protected databaseConnection: SyncOrAsyncFunction<
-		DbClient | DbConnection | undefined
-	>;
+	protected host: string;
+	protected port: number;
+	protected user: string;
+	protected password: string;
+	protected database?: string;
 
 	constructor(
-		databaseConnection: SyncOrAsyncFunction<
-			DbClient | DbConnection | undefined
-		>,
+		host: string,
+		port: number,
+		user: string,
+		password: string,
+		database?: string,
 	) {
-		this.databaseConnection = databaseConnection;
+		this.host = host;
+		this.port = port;
+		this.user = user;
+		this.password = password;
+		this.database = database;
+		this.initializeClient();
+	}
+
+	protected async initializeClient(): Promise<void> {
+		this.client = undefined;
 	}
 
 	protected async trySeveralTimes<T>(
@@ -68,10 +81,6 @@ class DatabaseQuery implements IDatabaseQuery {
 			}
 		}
 		throw new Error("Maximum retry attempts reached.");
-	}
-
-	protected async initializeClient(): Promise<void> {
-		this.client = await this.databaseConnection();
 	}
 
 	async query<T extends QueryResult>(
@@ -108,6 +117,16 @@ class DatabaseQuery implements IDatabaseQuery {
 }
 
 class DatabaseClient extends DatabaseQuery implements IDatabase {
+	protected override async initializeClient(): Promise<void> {
+		this.client = mysql.createPool({
+			host: this.host,
+			port: this.port,
+			user: this.user,
+			password: this.password,
+			database: this.database,
+		});
+	}
+
 	async tableExists(name: string): Promise<boolean> {
 		let rows: Rows = [];
 
@@ -171,6 +190,15 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 }
 
 class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
+	protected override async initializeClient(): Promise<void> {
+		this.client = await mysql.createConnection({
+			host: this.host,
+			port: this.port,
+			user: this.user,
+			password: this.password,
+		});
+	}
+
 	async databaseExists(database: string): Promise<boolean> {
 		let rows: Rows = [];
 
@@ -331,15 +359,7 @@ export function openDatabase(
 	password: string,
 	database: string,
 ): IDatabase {
-	return new DatabaseClient(() =>
-		mysql.createPool({
-			host,
-			port,
-			user,
-			password,
-			database,
-		}),
-	);
+	return new DatabaseClient(host, port, user, password, database);
 }
 
 export async function openConnection(
@@ -348,15 +368,7 @@ export async function openConnection(
 	user: string,
 	password: string,
 ): Promise<IDatabaseConnection> {
-	return new DatabaseConnection(
-		async () =>
-			await mysql.createConnection({
-				host,
-				port,
-				user,
-				password,
-			}),
-	);
+	return new DatabaseConnection(host, port, user, password);
 }
 
 export const DatabaseManager = {
