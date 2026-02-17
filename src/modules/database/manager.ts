@@ -1,5 +1,6 @@
 import mysql, { type QueryResult } from "mysql2/promise";
 import type { Schema } from "./schema.js";
+import { S } from "ollama/dist/shared/ollama.1bfa89da.mjs";
 
 export type DbClient = mysql.Pool;
 export type DbConnection = mysql.Connection;
@@ -16,6 +17,9 @@ export interface IDatabaseQuery {
 
 	close(): Promise<void>;
 }
+
+type SyncOrAsync<T> = T | Promise<T>;
+type SyncOrAsyncFunction<T> = () => SyncOrAsync<T>;
 
 export interface IDatabaseConnection extends IDatabaseQuery {
 	databaseExists(database: string): Promise<boolean>;
@@ -36,8 +40,38 @@ export interface IDatabase extends IDatabaseQuery {
 
 class DatabaseQuery implements IDatabaseQuery {
 	protected client: DbClient | DbConnection | undefined;
-	constructor(client: DbClient | DbConnection | undefined) {
-		this.client = client;
+	protected databaseConnection: SyncOrAsyncFunction<
+		DbClient | DbConnection | undefined
+	>;
+
+	constructor(
+		databaseConnection: SyncOrAsyncFunction<
+			DbClient | DbConnection | undefined
+		>,
+	) {
+		this.databaseConnection = databaseConnection;
+	}
+
+	protected async trySeveralTimes<T>(
+		functionSyncOrAsync: SyncOrAsyncFunction<T>,
+		maxRetries = 3,
+	): Promise<T> {
+		let tries = 0;
+		while (tries < maxRetries) {
+			try {
+				return await functionSyncOrAsync();
+			} catch (error) {
+				console.error("Database error:", error);
+				tries++;
+				console.debug(`Retrying... (${tries}/${maxRetries})`);
+				await this.initializeClient();
+			}
+		}
+		throw new Error("Maximum retry attempts reached.");
+	}
+
+	protected async initializeClient(): Promise<void> {
+		this.client = await this.databaseConnection();
 	}
 
 	async query<T extends QueryResult>(
@@ -45,11 +79,12 @@ class DatabaseQuery implements IDatabaseQuery {
 		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 		params?: any,
 	): Promise<[T, mysql.FieldPacket[]]> {
-		if (!this.client) {
-			throw new Error("Database client is not established.");
-		}
-
-		return await this.client.query<T>(sql, params);
+		return await this.trySeveralTimes(async () => {
+			return (
+				(await this.client?.query<T>(sql, params)) ??
+				([] as unknown as [T, mysql.FieldPacket[]])
+			);
+		});
 	}
 
 	async close(): Promise<void> {
@@ -68,61 +103,37 @@ class DatabaseQuery implements IDatabaseQuery {
 }
 
 class DatabaseClient extends DatabaseQuery implements IDatabase {
-	private connectDatabase: () => DbClient;
-	constructor(connectDatabase: () => DbClient) {
-		super(connectDatabase());
-		this.connectDatabase = connectDatabase;
-	}
-
 	async tableExists(name: string): Promise<boolean> {
-		console.debug(`Checking if table exists: ${name}`);
-		console.debug(`Client: ${this.client}`);
-
 		let rows: Rows = [];
-		let tries = 0;
-		const maxRetries = 3;
-		while (tries < maxRetries) {
-			try {
-				if (!this.client) {
-					this.client = this.connectDatabase();
-				}
 
-				[rows] = await this.client.query<Rows>(
+		[rows] = await this.trySeveralTimes(async () => {
+			if (!this.client) {
+				await this.initializeClient();
+			}
+
+			return (
+				(await this.client?.query<Rows>(
 					"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = ?",
 					[name],
-				);
-			} catch (error) {
-				console.error("Error in checking table existence:", error);
-				tries++;
-				console.debug(`Retrying... (${tries}/${maxRetries})`);
-				this.client = this.connectDatabase();
-			}
-		}
+				)) ?? ([] as unknown as [Rows, mysql.FieldPacket[]])
+			);
+		});
+
 		return rows.length > 0;
 	}
 
 	async createTable(name: string, schema: Schema): Promise<void> {
-		let tries = 0;
-		const maxRetries = 3;
-		while (tries < maxRetries) {
-			try {
-				if (!this.client) {
-					this.client = this.connectDatabase();
-				}
-
-				await this.deleteTable(name);
-
-				const tableName = this.sanitizeIdentifier(name);
-				const query = `CREATE TABLE ${tableName} (${schema.toString()}) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci`;
-				await this.client.query<Result>(query);
-				break;
-			} catch (error) {
-				console.error("Error in creating table:", error);
-				tries++;
-				console.debug(`Retrying... (${tries}/${maxRetries})`);
-				this.client = this.connectDatabase();
+		this.trySeveralTimes(async () => {
+			if (!this.client) {
+				await this.initializeClient();
 			}
-		}
+
+			await this.deleteTable(name);
+
+			const tableName = this.sanitizeIdentifier(name);
+			const query = `CREATE TABLE ${tableName} (${schema.toString()}) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci`;
+			await this.client?.query<Result>(query);
+		});
 	}
 
 	async deleteTable(name: string): Promise<void> {
@@ -130,22 +141,14 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 			return;
 		}
 
-		let tries = 0;
-		const maxRetries = 3;
-		while (tries < maxRetries) {
-			try {
-				if (!this.client) {
-					this.client = this.connectDatabase();
-				}
-				const tableName = this.sanitizeIdentifier(name);
-				await this.client.query(`DROP TABLE IF EXISTS ${tableName}`);
-			} catch (error) {
-				console.error("Error in deleting table:", error);
-				tries++;
-				console.debug(`Retrying... (${tries}/${maxRetries})`);
-				this.client = this.connectDatabase();
+		this.trySeveralTimes(async () => {
+			if (!this.client) {
+				await this.initializeClient();
 			}
-		}
+
+			const tableName = this.sanitizeIdentifier(name);
+			await this.client?.query(`DROP TABLE IF EXISTS ${tableName}`);
+		});
 	}
 }
 
@@ -158,82 +161,98 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 		const dbName = this.sanitizeIdentifier(database);
 		const [rows] = await this.client.query<Rows>(
 			"SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?",
-			[database],
+			[dbName],
 		);
 		return rows.length > 0;
 	}
 
 	async createDatabase(database: string): Promise<void> {
-		if (!this.client) {
-			throw new Error("Database connection is not established.");
-		}
+		this.trySeveralTimes(async () => {
+			if (!this.client) {
+				await this.initializeClient();
+			}
 
-		await this.deleteDatabase(database);
-
-		const dbName = this.sanitizeIdentifier(database);
-		await this.client.query<Result>(
-			`CREATE DATABASE ${dbName} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci`,
-		);
+			const dbName = this.sanitizeIdentifier(database);
+			await this.client?.query<Result>(
+				`CREATE DATABASE ${dbName} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci`,
+			);
+		});
 	}
 
 	async deleteDatabase(database: string): Promise<void> {
-		if (!this.client) {
-			throw new Error("Database connection is not established.");
-		}
+		this.trySeveralTimes(async () => {
+			if (!this.client) {
+				await this.initializeClient();
+			}
 
-		const dbName = this.sanitizeIdentifier(database);
-		await this.client.query(`DROP DATABASE IF EXISTS ${dbName}`);
+			const dbName = this.sanitizeIdentifier(database);
+			await this.client?.query(`DROP DATABASE IF EXISTS ${dbName}`);
+		});
 	}
 
 	async useDatabase(database: string): Promise<void> {
-		if (!this.client) {
-			throw new Error("Database connection is not established.");
-		}
-		const dbName = this.sanitizeIdentifier(database);
-		await this.client.query<Result>(`USE ${dbName}`);
+		this.trySeveralTimes(async () => {
+			if (!this.client) {
+				await this.initializeClient();
+			}
+
+			const dbName = this.sanitizeIdentifier(database);
+			await this.client?.query(`USE ${dbName}`);
+		});
 	}
 
 	async userExists(userName: string): Promise<boolean> {
-		if (!this.client) {
-			throw new Error("Database connection is not established.");
-		}
+		let rows: Rows = [];
+		this.trySeveralTimes(async () => {
+			if (!this.client) {
+				await this.initializeClient();
+			}
 
-		const [rows] = await this.client.query<Rows>(
-			"SELECT User FROM mysql.user WHERE User = ?",
-			[userName],
-		);
+			[rows] =
+				(await this.client?.query<Rows>(
+					"SELECT User FROM mysql.user WHERE User = ?",
+					[userName],
+				)) ?? ([] as unknown as [Rows, mysql.FieldPacket[]]);
+		});
 
 		return rows.length > 0;
 	}
 
 	async createUser(userName: string, password: string): Promise<void> {
-		if (!this.client) {
-			throw new Error("Database connection is not established.");
-		}
+		this.trySeveralTimes(async () => {
+			if (!this.client) {
+				await this.initializeClient();
+			}
 
-		await this.client.query<Result>(
-			"CREATE USER IF NOT EXISTS ?@'%' IDENTIFIED BY ?",
-			[userName, password],
-		);
+			await this.client?.query<Result>(
+				"CREATE USER IF NOT EXISTS ?@'%' IDENTIFIED BY ?",
+				[userName, password],
+			);
+		});
 	}
 
 	async grantAllPrivileges(userName: string): Promise<void> {
-		if (!this.client) {
-			throw new Error("Database connection is not established.");
-		}
+		this.trySeveralTimes(async () => {
+			if (!this.client) {
+				await this.initializeClient();
+			}
 
-		await this.client.query<Result>("GRANT ALL PRIVILEGES ON *.* TO ?@'%'", [
-			userName,
-		]);
+			await this.client?.query<Result>("GRANT ALL PRIVILEGES ON *.* TO ?@'%'", [
+				userName,
+			]);
 
-		await this.client.query<Result>("FLUSH PRIVILEGES");
+			await this.client?.query<Result>("FLUSH PRIVILEGES");
+		});
 	}
 
 	async deleteUser(userName: string): Promise<void> {
-		if (!this.client) {
-			throw new Error("Database connection is not established.");
-		}
-		await this.client.query<Result>("DROP USER IF EXISTS ?@'%'", [userName]);
+		this.trySeveralTimes(async () => {
+			if (!this.client) {
+				await this.initializeClient();
+			}
+
+			await this.client?.query<Result>("DROP USER IF EXISTS ?@'%'", [userName]);
+		});
 	}
 }
 
@@ -261,20 +280,17 @@ export async function openConnection(
 	user: string,
 	password: string,
 ): Promise<IDatabaseConnection> {
-	const connection = await mysql.createConnection({
-		host,
-		port,
-		user,
-		password,
-	});
-
-	return new DatabaseConnection(connection);
+	return new DatabaseConnection(
+		async () =>
+			await mysql.createConnection({
+				host,
+				port,
+				user,
+				password,
+			}),
+	);
 }
 
-/*
- Optional compatibility object to preserve the previous usage pattern
- (DatabaseManager.openDatabase / DatabaseManager.openConnection).
-*/
 export const DatabaseManager = {
 	openDatabase,
 	openConnection,
