@@ -141,9 +141,9 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 
 			await this.deleteTable(name);
 
-			const tableName = this.sanitizeIdentifier(name);
-			const query = `CREATE TABLE ${tableName} (${schema.toString()}) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci`;
-			await this.client.query<Result>(query);
+			const query =
+				"CREATE TABLE ? (?) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci";
+			await this.client.query<Result>(query, [name, schema.toString()]);
 		});
 	}
 
@@ -161,8 +161,7 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 				throw new Error("Database client is not initialized.");
 			}
 
-			const tableName = this.sanitizeIdentifier(name);
-			await this.client.query(`DROP TABLE IF EXISTS ${tableName}`);
+			await this.client.query("DROP TABLE IF EXISTS ?", [name]);
 		});
 	}
 }
@@ -180,10 +179,9 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 				throw new Error("Database client is not initialized.");
 			}
 
-			const dbName = this.sanitizeIdentifier(database);
 			return await this.client.query<Rows>(
 				"SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?",
-				[dbName],
+				[database],
 			);
 		});
 
@@ -200,9 +198,9 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 				throw new Error("Database client is not initialized.");
 			}
 
-			const dbName = this.sanitizeIdentifier(database);
 			await this.client.query<Result>(
-				`CREATE DATABASE ${dbName} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci`,
+				"CREATE DATABASE ? CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci",
+				[database],
 			);
 		});
 	}
@@ -217,8 +215,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 				throw new Error("Database client is not initialized.");
 			}
 
-			const dbName = this.sanitizeIdentifier(database);
-			await this.client.query(`DROP DATABASE IF EXISTS ${dbName}`);
+			await this.client.query("DROP DATABASE IF EXISTS ?", [database]);
 		});
 	}
 
@@ -233,7 +230,7 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 			}
 
 			const dbName = this.sanitizeIdentifier(database);
-			await this.client.query(`USE ${dbName}`);
+			await this.client.query("USE ?", [database]);
 		});
 	}
 
