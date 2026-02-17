@@ -90,9 +90,13 @@ class DatabaseQuery implements IDatabaseQuery {
 
 	async close(): Promise<void> {
 		if (this.client) {
-			await this.client.end();
-			this.client = undefined;
+			try {
+				await this.client.end();
+			} catch (error) {
+				console.error("Error closing database connection:", error);
+			}
 		}
+		this.client = undefined;
 	}
 
 	protected sanitizeIdentifier(name: string): string {
@@ -149,7 +153,11 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 			},
 			async () => {
 				if (this.client) {
-					await this.client.end();
+					try {
+						await this.client.end();
+					} catch (error) {
+						console.error("Error closing database connection:", error);
+					}
 				}
 
 				this.client = await this.initializeClient();
@@ -173,7 +181,11 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 			},
 			async () => {
 				if (this.client) {
-					await this.client.end();
+					try {
+						await this.client.end();
+					} catch (error) {
+						console.error("Error closing database connection:", error);
+					}
 				}
 
 				this.client = await this.initializeClient();
@@ -198,7 +210,11 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 			},
 			async () => {
 				if (this.client) {
-					await this.client.end();
+					try {
+						await this.client.end();
+					} catch (error) {
+						console.error("Error closing database connection:", error);
+					}
 				}
 
 				this.client = await this.initializeClient();
@@ -217,7 +233,11 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 			},
 			async () => {
 				if (this.client) {
-					await this.client.end();
+					try {
+						await this.client.end();
+					} catch (error) {
+						console.error("Error closing database connection:", error);
+					}
 				}
 
 				this.client = await this.initializeClient();
@@ -240,7 +260,11 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 			},
 			async () => {
 				if (this.client) {
-					await this.client.end();
+					try {
+						await this.client.end();
+					} catch (error) {
+						console.error("Error closing database connection:", error);
+					}
 				}
 
 				this.client = await this.initializeClient();
@@ -277,7 +301,11 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 			},
 			async () => {
 				if (this.client) {
-					await this.client.end();
+					try {
+						await this.client.end();
+					} catch (error) {
+						console.error("Error closing database connection:", error);
+					}
 				}
 
 				this.client = await this.initializeClient();
@@ -301,7 +329,11 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 			},
 			async () => {
 				if (this.client) {
-					await this.client.end();
+					try {
+						await this.client.end();
+					} catch (error) {
+						console.error("Error closing database connection:", error);
+					}
 				}
 
 				this.client = await this.initializeClient();
@@ -329,7 +361,11 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 			},
 			async () => {
 				if (this.client) {
-					await this.client.end();
+					try {
+						await this.client.end();
+					} catch (error) {
+						console.error("Error closing database connection:", error);
+					}
 				}
 
 				this.client = await this.initializeClient();
@@ -348,7 +384,11 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 			},
 			async () => {
 				if (this.client) {
-					await this.client.end();
+					try {
+						await this.client.end();
+					} catch (error) {
+						console.error("Error closing database connection:", error);
+					}
 				}
 
 				this.client = await this.initializeClient();
@@ -367,7 +407,11 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 			},
 			async () => {
 				if (this.client) {
-					await this.client.end();
+					try {
+						await this.client.end();
+					} catch (error) {
+						console.error("Error closing database connection:", error);
+					}
 				}
 
 				this.client = await this.initializeClient();
@@ -390,7 +434,11 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 			},
 			async () => {
 				if (this.client) {
-					await this.client.end();
+					try {
+						await this.client.end();
+					} catch (error) {
+						console.error("Error closing database connection:", error);
+					}
 				}
 
 				this.client = await this.initializeClient();
@@ -418,7 +466,11 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 			},
 			async () => {
 				if (this.client) {
-					await this.client.end();
+					try {
+						await this.client.end();
+					} catch (error) {
+						console.error("Error closing database connection:", error);
+					}
 				}
 
 				this.client = await this.initializeClient();
@@ -440,7 +492,11 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 			},
 			async () => {
 				if (this.client) {
-					await this.client.end();
+					try {
+						await this.client.end();
+					} catch (error) {
+						console.error("Error closing database connection:", error);
+					}
 				}
 
 				this.client = await this.initializeClient();
@@ -457,7 +513,11 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 			},
 			async () => {
 				if (this.client) {
-					await this.client.end();
+					try {
+						await this.client.end();
+					} catch (error) {
+						console.error("Error closing database connection:", error);
+					}
 				}
 
 				this.client = await this.initializeClient();
@@ -478,7 +538,11 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 			},
 			async () => {
 				if (this.client) {
-					await this.client.end();
+					try {
+						await this.client.end();
+					} catch (error) {
+						console.error("Error closing database connection:", error);
+					}
 				}
 
 				this.client = await this.initializeClient();
