@@ -160,7 +160,9 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 						const connection = await (this.client as DbClient).getConnection();
 						connection.destroy();
 					} catch (error) {
-						console.error("Error closing database connection:", error);
+						if (error instanceof Error && error.message !== "Pool is closed") {
+							console.error("Error closing database connection:", error);
+						}
 					}
 				}
 
@@ -188,7 +190,9 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 						const connection = await (this.client as DbClient).getConnection();
 						connection.destroy();
 					} catch (error) {
-						console.error("Error closing database connection:", error);
+						if (error instanceof Error && error.message !== "Pool is closed") {
+							console.error("Error closing database connection:", error);
+						}
 					}
 				}
 
@@ -218,7 +222,9 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 						const connection = await (this.client as DbClient).getConnection();
 						connection.destroy();
 					} catch (error) {
-						console.error("Error closing database connection:", error);
+						if (error instanceof Error && error.message !== "Pool is closed") {
+							console.error("Error closing database connection:", error);
+						}
 					}
 				}
 
@@ -240,8 +246,11 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 				if (this.client) {
 					try {
 						const connection = await (this.client as DbClient).getConnection();
+						connection.destroy();
 					} catch (error) {
-						console.error("Error closing database connection:", error);
+						if (error instanceof Error && error.message !== "Pool is closed") {
+							console.error("Error closing database connection:", error);
+						}
 					}
 				}
 
@@ -269,7 +278,9 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 						const connection = await (this.client as DbClient).getConnection();
 						connection.destroy();
 					} catch (error) {
-						console.error("Error closing database connection:", error);
+						if (error instanceof Error && error.message !== "Pool is closed") {
+							console.error("Error closing database connection:", error);
+						}
 					}
 				}
 
@@ -309,7 +320,9 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 					try {
 						this.client.destroy();
 					} catch (error) {
-						console.error("Error closing database connection:", error);
+						if (error instanceof Error && error.message !== "Pool is closed") {
+							console.error("Error closing database connection:", error);
+						}
 					}
 				}
 
@@ -336,7 +349,9 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 					try {
 						this.client.destroy();
 					} catch (error) {
-						console.error("Error closing database connection:", error);
+						if (error instanceof Error && error.message !== "Pool is closed") {
+							console.error("Error closing database connection:", error);
+						}
 					}
 				}
 
@@ -368,7 +383,9 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 					try {
 						this.client.destroy();
 					} catch (error) {
-						console.error("Error closing database connection:", error);
+						if (error instanceof Error && error.message !== "Pool is closed") {
+							console.error("Error closing database connection:", error);
+						}
 					}
 				}
 
@@ -391,7 +408,9 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 					try {
 						this.client.destroy();
 					} catch (error) {
-						console.error("Error closing database connection:", error);
+						if (error instanceof Error && error.message !== "Pool is closed") {
+							console.error("Error closing database connection:", error);
+						}
 					}
 				}
 
@@ -414,7 +433,9 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 					try {
 						this.client.destroy();
 					} catch (error) {
-						console.error("Error closing database connection:", error);
+						if (error instanceof Error && error.message !== "Pool is closed") {
+							console.error("Error closing database connection:", error);
+						}
 					}
 				}
 
@@ -442,7 +463,9 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 					try {
 						this.client.destroy();
 					} catch (error) {
-						console.error("Error closing database connection:", error);
+						if (error instanceof Error && error.message !== "Pool is closed") {
+							console.error("Error closing database connection:", error);
+						}
 					}
 				}
 
@@ -474,7 +497,9 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 					try {
 						this.client.destroy();
 					} catch (error) {
-						console.error("Error closing database connection:", error);
+						if (error instanceof Error && error.message !== "Pool is closed") {
+							console.error("Error closing database connection:", error);
+						}
 					}
 				}
 
@@ -500,7 +525,9 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 					try {
 						this.client.destroy();
 					} catch (error) {
-						console.error("Error closing database connection:", error);
+						if (error instanceof Error && error.message !== "Pool is closed") {
+							console.error("Error closing database connection:", error);
+						}
 					}
 				}
 
@@ -521,7 +548,9 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 					try {
 						this.client.destroy();
 					} catch (error) {
-						console.error("Error closing database connection:", error);
+						if (error instanceof Error && error.message !== "Pool is closed") {
+							console.error("Error closing database connection:", error);
+						}
 					}
 				}
 
@@ -546,7 +575,9 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 					try {
 						this.client.destroy();
 					} catch (error) {
-						console.error("Error closing database connection:", error);
+						if (error instanceof Error && error.message !== "Pool is closed") {
+							console.error("Error closing database connection:", error);
+						}
 					}
 				}
 
