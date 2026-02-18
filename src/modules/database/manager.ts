@@ -79,7 +79,11 @@ class DatabaseQuery implements IDatabaseQuery {
 			try {
 				return await functionSyncOrAsync();
 			} catch (error) {
-				console.error("Database error:", error);
+				if (error instanceof Error) {
+					console.error(error.message);
+				} else {
+					console.error(error);
+				}
 				tries++;
 				console.debug(`Retrying... (${tries}/${maxRetries})`);
 				await catchError();
@@ -128,7 +132,6 @@ class DatabaseClient extends DatabaseQuery implements IDatabase {
 	protected override async initializeClient(): Promise<
 		DbClient | DbConnection
 	> {
-		console.log("Initializing database client...");
 		return mysql.createPool({
 			host: this.host,
 			port: this.port,
@@ -280,7 +283,6 @@ class DatabaseConnection extends DatabaseQuery implements IDatabaseConnection {
 	protected override async initializeClient(): Promise<
 		DbClient | DbConnection
 	> {
-		console.log("Initializing database connection...");
 		return await mysql.createConnection({
 			host: this.host,
 			port: this.port,

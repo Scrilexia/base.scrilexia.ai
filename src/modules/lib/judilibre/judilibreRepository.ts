@@ -50,9 +50,7 @@ export class JudilibreRepository extends BaseRepository {
 			return;
 		}
 
-		if (
-			!(await this.client?.tableExists(`jdl_decision_${this.jurisdiction}`))
-		) {
+		if (!(await this.client.tableExists(`jdl_decision_${this.jurisdiction}`))) {
 			const schema = new Schema();
 			schema.addColumn("id", "VARCHAR(60) PRIMARY KEY NOT NULL");
 			schema.addColumn("jurisdiction", "TEXT NOT NULL");
@@ -67,7 +65,7 @@ export class JudilibreRepository extends BaseRepository {
 			schema.addColumn("summary", "TEXT NOT NULL");
 			schema.addColumn("themes", "JSON NOT NULL");
 			schema.addColumn("visas", "JSON NOT NULL");
-			await this.client?.createTable(
+			await this.client.createTable(
 				`jdl_decision_${this.jurisdiction}`,
 				schema,
 			);
@@ -207,6 +205,10 @@ export class JudilibreRepository extends BaseRepository {
 
 		await this.disconnect();
 
+		if (rows.length === 0) {
+			return 0;
+		}
+
 		return rows[0].count;
 	}
 
@@ -219,6 +221,10 @@ export class JudilibreRepository extends BaseRepository {
 			 WHERE (JSON_LENGTH(themes) > 0 AND JSON_LENGTH(visas) > 0 AND summary IS NOT NULL AND summary != '')`,
 		)) ?? [[]];
 		await this.disconnect();
+
+		if (rows.length === 0) {
+			return 0;
+		}
 
 		return rows[0].count;
 	}
