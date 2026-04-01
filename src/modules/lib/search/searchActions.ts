@@ -12,6 +12,10 @@ interface ApiCustomSearchResult {
 	snippet: string;
 }
 
+interface ApiCustomSearchResults {
+	items: Array<ApiCustomSearchResult>;
+}
+
 export const searchWithCustom: RequestHandler = async (req, res, next) => {
 	const blockIndex = Number.parseInt(req.body.index as string) || 0;
 	const query = req.body.query as string;
@@ -40,7 +44,7 @@ export const searchWithCustom: RequestHandler = async (req, res, next) => {
 	const url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${customSearchEngineId}&q=${query}&start=${startIndex}&num=${numResults}`;
 
 	const response = await trySeveralTimes(() =>
-		httpRequest<Array<ApiCustomSearchResult>>(url, {
+		httpRequest<ApiCustomSearchResults>(url, {
 			method: "GET",
 			headers: {
 				"Content-Type": "application/json",
@@ -53,10 +57,10 @@ export const searchWithCustom: RequestHandler = async (req, res, next) => {
 		return;
 	}
 
-	const data: Array<ApiCustomSearchResult> =
+	const data: ApiCustomSearchResults =
 		response instanceof Response
-			? ((await response.json()) as Array<ApiCustomSearchResult>)
-			: (response as AxiosResponse<Array<ApiCustomSearchResult>>).data;
+			? ((await response.json()) as ApiCustomSearchResults)
+			: (response as AxiosResponse<ApiCustomSearchResults>).data;
 
 	res.status(200).json(data);
 };
