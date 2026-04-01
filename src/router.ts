@@ -26,6 +26,7 @@ import {
 	judilibreDecisionsImportVectorReset,
 } from "./modules/lib/judilibre/judilibreActions.js";
 
+import { searchWithCustom } from "./modules/lib/search/searchActions.js";
 import {
 	databaseCodeArticles,
 	databaseCodeLawArticlesById,
@@ -82,6 +83,8 @@ routerQuery.post("/api/decision/ca", databaseDecisionsCa);
 routerQuery.post("/api/decision/cc/id", databaseDecisionsCcById);
 routerQuery.post("/api/decision/ca/id", databaseDecisionsCaById);
 
+routerQuery.post("/api/search/custom", searchWithCustom);
+
 router.post("/api/code", databaseCodeArticles);
 router.post("/api/law", databaseLawArticles);
 router.post("/api/codelaw/id", databaseCodeLawArticlesById);
@@ -89,5 +92,7 @@ router.post("/api/decision/cc", databaseDecisionsCc);
 router.post("/api/decision/ca", databaseDecisionsCa);
 router.post("/api/decision/cc/id", databaseDecisionsCcById);
 router.post("/api/decision/ca/id", databaseDecisionsCaById);
+
+router.post("/api/search/custom", searchWithCustom);
 
 export { router, routerQuery };
