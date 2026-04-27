@@ -2,6 +2,8 @@ name: scrilexia-ai
 services:
   qdrant-legifrance-judilibre-service:
     image: qdrant/qdrant
+    storage_opt:
+      size: "40G"
     container_name: qdrant_legifrance_judilibre
     restart: always
     ports:
@@ -29,6 +31,8 @@ services:
     restart: unless-stopped
   ollama-service:
     image: ollama/ollama:latest
+    storage_opt:
+      size: "40G"
     container_name: ollama_service
     ports:
       - "11434:11434"
