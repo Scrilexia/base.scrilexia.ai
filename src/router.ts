@@ -1,36 +1,36 @@
 import express, { type RequestHandler } from "express";
 import {
-	legiFranceArticlesAndLawsBuildTrainingDataset,
-	legiFranceArticlesAndLawsImportAbort,
-	legiFranceArticlesAndLawsImportQdrant,
-	legiFranceArticlesAndLawsImportSql,
-	legiFranceArticlesImportAbort,
-	legiFranceArticlesImportQdrant,
-	legiFranceArticlesImportSql,
-	legiFranceBuildTrainingDataset,
-	legiFranceResetArticlesQdrant,
-	legiFranceResetArticlesSql,
+    legiFranceArticlesAndLawsBuildTrainingDataset,
+    legiFranceArticlesAndLawsImportAbort,
+    legiFranceArticlesAndLawsImportQdrant,
+    legiFranceArticlesAndLawsImportSql,
+    legiFranceArticlesImportAbort,
+    legiFranceArticlesImportQdrant,
+    legiFranceArticlesImportSql,
+    legiFranceBuildTrainingDataset,
+    legiFranceResetArticlesQdrant,
+    legiFranceResetArticlesSql,
 } from "./modules/lib/legiFrance/legiFranceActions.js";
 
 import {
-	databaseDecisionsCa,
-	databaseDecisionsCaById,
-	databaseDecisionsCc,
-	databaseDecisionsCcById,
-	judilibreDecisionsBuildTrainingDatasetSummariesAndDecisions,
-	judilibreDecisionsBuildTrainingDatasetThemesAndDecisions,
-	judilibreDecisionsImportAbort,
-	judilibreDecisionsImportSql,
-	judilibreDecisionsImportSqlReset,
-	judilibreDecisionsImportVector,
-	judilibreDecisionsImportVectorReset,
+    databaseDecisionsCa,
+    databaseDecisionsCaById,
+    databaseDecisionsCc,
+    databaseDecisionsCcById,
+    judilibreDecisionsBuildTrainingDatasetSummariesAndDecisions,
+    judilibreDecisionsBuildTrainingDatasetThemesAndDecisions,
+    judilibreDecisionsImportAbort,
+    judilibreDecisionsImportSql,
+    judilibreDecisionsImportSqlReset,
+    judilibreDecisionsImportVector,
+    judilibreDecisionsImportVectorReset,
 } from "./modules/lib/judilibre/judilibreActions.js";
 
 import { searchWithCustom } from "./modules/lib/search/searchActions.js";
 import {
-	databaseCodeArticles,
-	databaseCodeLawArticlesById,
-	databaseLawArticles,
+    databaseCodeArticles,
+    databaseCodeLawArticlesById,
+    databaseLawArticles,
 } from "./modules/lib/database/databaseActions.js";
 
 import { Abort } from "./utils/abortController.js";
@@ -43,8 +43,8 @@ const router = express.Router();
 const routerQuery = express.Router();
 
 const setTimeoutMiddleware: RequestHandler = (req, res, next) => {
-	req.setTimeout(15 * 60 * 1000); // 15 minutes
-	next();
+    req.setTimeout(15 * 60 * 1000); // 15 minutes
+    next();
 };
 
 router.post("/api/articles/sql", legiFranceArticlesImportSql);
@@ -65,14 +65,14 @@ router.post("/api/decisions/sql", judilibreDecisionsImportSql);
 router.post("/api/decisions/sql/reset", judilibreDecisionsImportSqlReset);
 router.post("/api/decisions/abort", judilibreDecisionsImportAbort);
 router.post(
-	"/api/decisions/train/themes",
-	setTimeoutMiddleware,
-	judilibreDecisionsBuildTrainingDatasetThemesAndDecisions,
+    "/api/decisions/train/themes",
+    setTimeoutMiddleware,
+    judilibreDecisionsBuildTrainingDatasetThemesAndDecisions,
 );
 router.post(
-	"/api/decisions/train/summaries",
-	setTimeoutMiddleware,
-	judilibreDecisionsBuildTrainingDatasetSummariesAndDecisions,
+    "/api/decisions/train/summaries",
+    setTimeoutMiddleware,
+    judilibreDecisionsBuildTrainingDatasetSummariesAndDecisions,
 );
 
 routerQuery.post("/api/code", databaseCodeArticles);
@@ -84,6 +84,16 @@ routerQuery.post("/api/decision/cc/id", databaseDecisionsCcById);
 routerQuery.post("/api/decision/ca/id", databaseDecisionsCaById);
 
 routerQuery.post("/api/search/custom", searchWithCustom);
+
+routerQuery.post("/api/restart", (_req, res) => {
+    console.info("Restarting the server...");
+    res.status(200).send("Server is restarting...");
+
+    setTimeout(() => {
+        console.log('[restart] process stopped.');
+        process.exit(0);
+    }, 500);
+});
 
 router.post("/api/code", databaseCodeArticles);
 router.post("/api/law", databaseLawArticles);
