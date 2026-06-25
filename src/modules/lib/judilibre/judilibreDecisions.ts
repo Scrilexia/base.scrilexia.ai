@@ -127,10 +127,6 @@ export class JudilibreDecisions extends JudilibreDecisionsBase {
                     lastDate = new Date(decision.decision_date);
                     currentIndex++;
 
-                    console.log(
-                        `decision id ${decisionCumulCount + currentIndex}: ${decision.id} - ${decision.location ?? decision.jurisdiction}${decision.chamber ? `, ${decision.chamber}` : ""} du ${this.buildDate(decision.decision_date)} n°${decision.number}`,
-                    );
-
                     let summary = "";
                     if (decision.summary && decision.summary.trim() !== "") {
                         summary = decision.summary;
@@ -155,8 +151,12 @@ export class JudilibreDecisions extends JudilibreDecisionsBase {
                     const decisionFound = await this.judilibreRepository.read(
                         decision.id,
                     );
-                    if (!decisionFound) {
-                        try {
+
+                    try {
+                        if (!decisionFound) {
+                            console.log(
+                                `decision id ${decisionCumulCount + currentIndex}: ${decision.id} - ${decision.location ?? decision.jurisdiction}${decision.chamber ? `, ${decision.chamber}` : ""} du ${this.buildDate(decision.decision_date)} n°${decision.number} - create`,
+                            );
                             await this.judilibreRepository.create({
                                 id: decision.id,
                                 jurisdiction: decision.jurisdiction,
@@ -172,27 +172,30 @@ export class JudilibreDecisions extends JudilibreDecisionsBase {
                                 themes: decision.themes,
                                 visas: decision.visas,
                             });
-                        } catch (error) {
-                            console.error(
-                                `Error processing decision id ${decision.id}: ${error}`,
+                        } else {
+                            console.log(
+                                `decision id ${decisionCumulCount + currentIndex}: ${decision.id} - ${decision.location ?? decision.jurisdiction}${decision.chamber ? `, ${decision.chamber}` : ""} du ${this.buildDate(decision.decision_date)} n°${decision.number} - update`,
                             );
+                            await this.judilibreRepository.update({
+                                id: decision.id,
+                                jurisdiction: decision.jurisdiction,
+                                location: decision.location ?? decision.jurisdiction,
+                                chamber: decision.chamber ?? "",
+                                number: decision.number ?? "unknown",
+                                decisionDate: decision.decision_date,
+                                type: decision.type ?? "unknown",
+                                text: decision.text,
+                                motivations: decision.zones?.motivations ?? [],
+                                solution: decision.solution ?? "",
+                                summary: decision.summary || "",
+                                themes: decision.themes,
+                                visas: decision.visas,
+                            });
                         }
-                    } else {
-                        await this.judilibreRepository.update({
-                            id: decision.id,
-                            jurisdiction: decision.jurisdiction,
-                            location: decision.location ?? decision.jurisdiction,
-                            chamber: decision.chamber ?? "",
-                            number: decision.number ?? "unknown",
-                            decisionDate: decision.decision_date,
-                            type: decision.type ?? "unknown",
-                            text: decision.text,
-                            motivations: decision.zones?.motivations ?? [],
-                            solution: decision.solution ?? "",
-                            summary: decision.summary || "",
-                            themes: decision.themes,
-                            visas: decision.visas,
-                        });
+                    } catch (error) {
+                        console.error(
+                            `Error processing decision id ${decision.id}: ${error}`,
+                        );
                     }
 
                     if (this.abortController.controller.signal.aborted) {
